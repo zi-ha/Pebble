@@ -8,7 +8,7 @@ import { useMailStore } from "@/stores/mail.store";
 import { useToastStore } from "@/stores/toast.store";
 import { updateMessageFlags, archiveMessage, getMessage } from "@/lib/api";
 import { queryClient } from "@/lib/query-client";
-import type { MessageSummary, ThreadSummary } from "@/lib/api";
+import type { MessageSummary } from "@/lib/api";
 import { patchMessagesCache, readFirstCachedMessages } from "@/hooks/queries";
 import i18n from "@/lib/i18n";
 
@@ -29,15 +29,6 @@ export { eventToKeyString };
 /** Read the first matching cached messages from React Query */
 function getCachedMessages(): MessageSummary[] {
   return readFirstCachedMessages(queryClient);
-}
-
-/** Read the first matching cached threads from React Query */
-function getCachedThreads(): ThreadSummary[] {
-  const entries = queryClient.getQueriesData<ThreadSummary[]>({ queryKey: ["threads"] });
-  for (const [, data] of entries) {
-    if (data && data.length > 0) return data;
-  }
-  return [];
 }
 
 async function confirmLeaveCompose(): Promise<boolean> {
@@ -186,35 +177,19 @@ export function useKeyboard() {
         }
         case "next-message": {
           const state = useMailStore.getState();
-          if (state.threadView) {
-            const threads = getCachedThreads();
-            const idx = threads.findIndex((t) => t.thread_id === state.selectedThreadId);
-            if (idx < threads.length - 1) {
-              state.setSelectedThreadId(threads[idx + 1].thread_id);
-            }
-          } else {
-            const messages = getCachedMessages();
-            const idx = messages.findIndex((m) => m.id === state.selectedMessageId);
-            if (idx < messages.length - 1) {
-              state.setSelectedMessage(messages[idx + 1].id);
-            }
+          const messages = getCachedMessages();
+          const idx = messages.findIndex((m) => m.id === state.selectedMessageId);
+          if (idx < messages.length - 1) {
+            state.setSelectedMessage(messages[idx + 1].id);
           }
           break;
         }
         case "prev-message": {
           const state = useMailStore.getState();
-          if (state.threadView) {
-            const threads = getCachedThreads();
-            const idx = threads.findIndex((t) => t.thread_id === state.selectedThreadId);
-            if (idx > 0) {
-              state.setSelectedThreadId(threads[idx - 1].thread_id);
-            }
-          } else {
-            const messages = getCachedMessages();
-            const idx = messages.findIndex((m) => m.id === state.selectedMessageId);
-            if (idx > 0) {
-              state.setSelectedMessage(messages[idx - 1].id);
-            }
+          const messages = getCachedMessages();
+          const idx = messages.findIndex((m) => m.id === state.selectedMessageId);
+          if (idx > 0) {
+            state.setSelectedMessage(messages[idx - 1].id);
           }
           break;
         }
@@ -249,29 +224,28 @@ export function useKeyboard() {
           break;
         }
         case "focus-search":
-          confirmLeaveCompose().then((ok) => { if (ok) navigateAfterComposeConfirm("search"); });
+          confirmLeaveCompose().then((ok) => {
+            if (!ok) return;
+            navigateAfterComposeConfirm("search");
+            useUIStore.getState().requestSearchFocus();
+          });
           break;
         case "open-message": {
           const state = useMailStore.getState();
-          if (state.threadView) {
-            if (!state.selectedThreadId) {
-              const threads = getCachedThreads();
-              if (threads.length > 0) {
-                state.setSelectedThreadId(threads[0].thread_id);
-              }
-            }
-          } else {
-            if (!state.selectedMessageId) {
-              const messages = getCachedMessages();
-              if (messages.length > 0) {
-                state.setSelectedMessage(messages[0].id);
-              }
+          if (!state.selectedMessageId) {
+            const messages = getCachedMessages();
+            if (messages.length > 0) {
+              state.setSelectedMessage(messages[0].id);
             }
           }
           break;
         }
         case "open-search":
-          confirmLeaveCompose().then((ok) => { if (ok) navigateAfterComposeConfirm("search"); });
+          confirmLeaveCompose().then((ok) => {
+            if (!ok) return;
+            navigateAfterComposeConfirm("search");
+            useUIStore.getState().requestSearchFocus();
+          });
           break;
         case "open-cloud-settings":
           confirmLeaveCompose().then((ok) => { if (ok) navigateAfterComposeConfirm("settings"); });

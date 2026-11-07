@@ -22,14 +22,16 @@ pub async fn list_messages(
 #[tauri::command]
 pub async fn list_starred_messages(
     state: State<'_, AppState>,
-    account_id: String,
+    account_id: Option<String>,
     limit: u32,
     offset: u32,
 ) -> std::result::Result<Vec<MessageSummary>, PebbleError> {
     let store = state.store.clone();
-    tokio::task::spawn_blocking(move || store.list_starred_messages(&account_id, limit, offset))
-        .await
-        .map_err(|e| PebbleError::Internal(format!("Task join error: {e}")))?
+    tokio::task::spawn_blocking(move || {
+        store.list_starred_messages(account_id.as_deref(), limit, offset)
+    })
+    .await
+    .map_err(|e| PebbleError::Internal(format!("Task join error: {e}")))?
 }
 
 #[tauri::command]

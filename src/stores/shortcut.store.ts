@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSingleton } from "./singleton";
 import { profileLocalStorage } from "@/lib/profileStorage";
 
 export interface ShortcutBinding {
@@ -50,7 +51,8 @@ function loadBindings(): Record<string, string> {
   return { ...DEFAULT_BINDINGS };
 }
 
-export const useShortcutStore = create<ShortcutState>((set, get) => ({
+export const useShortcutStore = createSingleton("shortcut", () =>
+  create<ShortcutState>((set, get) => ({
   bindings: loadBindings(),
   recording: null,
   updateShortcut: (actionId, keys) => {
@@ -73,6 +75,7 @@ export const useShortcutStore = create<ShortcutState>((set, get) => ({
     }
     return null;
   },
-}));
+  })),
+);
 
 export { DEFAULT_BINDINGS };

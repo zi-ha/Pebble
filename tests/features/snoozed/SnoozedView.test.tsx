@@ -77,25 +77,15 @@ describe("SnoozedView", () => {
     mocks.getMessagesBatch.mockResolvedValue([makeMessage("message-2")]);
     mocks.unsnoozeMessage.mockResolvedValue();
     useUIStore.setState({ activeView: "snoozed" });
-    useMailStore.setState({
-      selectedMessageId: null,
-      selectedThreadId: "thread-1",
-      threadView: true,
-      selectedMessageIds: new Set(["message-1"]),
-      batchMode: true,
-    });
+    useMailStore.setState({ selectedMessageId: null });
   });
 
-  it("opens snoozed messages in message mode instead of leaving stale thread mode active", async () => {
+  it("opens a snoozed message in the inbox reading pane", async () => {
     render(<SnoozedView />);
 
     fireEvent.click(await screen.findByText("Snoozed subject"));
 
     expect(useUIStore.getState().activeView).toBe("inbox");
     expect(useMailStore.getState().selectedMessageId).toBe("message-2");
-    expect(useMailStore.getState().selectedThreadId).toBe(null);
-    expect(useMailStore.getState().threadView).toBe(false);
-    expect(useMailStore.getState().selectedMessageIds.size).toBe(0);
-    expect(useMailStore.getState().batchMode).toBe(false);
   });
 });

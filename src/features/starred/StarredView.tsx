@@ -7,6 +7,7 @@ import { useMailStore } from "@/stores/mail.store";
 import { extractErrorMessage } from "@/lib/extractErrorMessage";
 import MessageItem from "@/components/MessageItem";
 import MessageDetail from "@/components/MessageDetail";
+import MessageDetailEmpty from "@/components/MessageDetailEmpty";
 
 const EMPTY_REMOVED_IDS = new Set<string>();
 
@@ -124,15 +125,8 @@ export default function StarredView() {
   }
 
   return (
-    <div className="fade-in" style={{ display: "flex", height: "100%" }}>
-      <div style={{
-        width: scopedSelectedId ? "340px" : "100%",
-        borderRight: scopedSelectedId ? "1px solid var(--color-border)" : "none",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        transition: "width 0.15s ease",
-      }}>
+    <div className="fade-in mail-panes">
+      <div className="mail-list-pane">
         <div style={{
           padding: "12px 16px", borderBottom: "1px solid var(--color-border)",
           fontSize: "14px", fontWeight: 600, color: "var(--color-text-primary)",
@@ -205,14 +199,16 @@ export default function StarredView() {
         )}
       </div>
 
-      {scopedSelectedId && (
-        <div className="scroll-region starred-detail-scroll" style={{ flex: 1, overflow: "auto" }}>
+      <div className="mail-detail-pane">
+        {scopedSelectedId ? (
           <MessageDetail
             messageId={scopedSelectedId}
             onBack={() => setSelectedId(null)}
           />
-        </div>
-      )}
+        ) : (
+          <MessageDetailEmpty />
+        )}
+      </div>
     </div>
   );
 }

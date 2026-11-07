@@ -321,4 +321,85 @@ mod tests {
         assert_eq!(messages[0].subject, "Hello World");
         assert_eq!(messages[0].from_address, "sender@example.com");
     }
+
+    #[test]
+    fn test_list_starred_messages_across_accounts() {
+        let store = Store::open_in_memory().unwrap();
+        let now = pebble_core::now_timestamp();
+        let mut account_ids = Vec::new();
+
+        for (index, email) in ["one@example.com", "two@example.com"].iter().enumerate() {
+            let account = pebble_core::Account {
+                account_label: None,
+                provider_display_name: None,
+                id: pebble_core::new_id(),
+                email: (*email).to_string(),
+                display_name: format!("Account {index}"),
+                color: None,
+                provider: ProviderType::Imap,
+                created_at: now,
+                updated_at: now,
+            };
+            store.insert_account(&account).unwrap();
+
+            let folder = pebble_core::Folder {
+                id: pebble_core::new_id(),
+                account_id: account.id.clone(),
+                remote_id: "INBOX".to_string(),
+                name: "Inbox".to_string(),
+                folder_type: pebble_core::FolderType::Folder,
+                role: Some(pebble_core::FolderRole::Inbox),
+                parent_id: None,
+                color: None,
+                is_system: true,
+                sort_order: 0,
+            };
+            store.insert_folder(&folder).unwrap();
+
+            let msg = pebble_core::Message {
+                id: pebble_core::new_id(),
+                account_id: account.id.clone(),
+                remote_id: format!("remote-{index}"),
+                message_id_header: None,
+                in_reply_to: None,
+                references_header: None,
+                thread_id: None,
+                subject: format!("Starred {index}"),
+                snippet: String::new(),
+                from_address: "sender@example.com".to_string(),
+                from_name: "Sender".to_string(),
+                to_list: vec![],
+                cc_list: vec![],
+                bcc_list: vec![],
+                body_text: String::new(),
+                body_html_raw: String::new(),
+                has_attachments: false,
+                is_read: true,
+                is_starred: true,
+                is_draft: false,
+                date: now + index as i64,
+                remote_version: None,
+                is_deleted: false,
+                deleted_at: None,
+                created_at: now,
+                updated_at: now,
+            };
+            store
+                .insert_message(&msg, std::slice::from_ref(&folder.id))
+                .unwrap();
+            account_ids.push(account.id);
+        }
+
+        // `None` is the combined "all accounts" mailbox.
+        let all = store.list_starred_messages(None, 50, 0).unwrap();
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].subject, "Starred 1");
+        assert_eq!(all[1].subject, "Starred 0");
+
+        let scoped = store
+            .list_starred_messages(Some(&account_ids[0]), 50, 0)
+            .unwrap();
+        assert_eq!(scoped.len(), 1);
+        assert_eq!(scoped[0].subject, "Starred 0");
+    }
 }

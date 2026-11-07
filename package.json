@@ -1,12 +1,14 @@
 {
   "name": "pebble",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.1.7",
+  "packageManager": "pnpm@10.30.3",
   "type": "module",
   "scripts": {
     "dev:frontend": "vite",
     "build:frontend": "tsc && vite build",
     "preview": "vite preview",
+    "tauri": "tauri",
     "dev": "tauri dev",
     "build": "node scripts/build-tauri.mjs",
     "build:windows": "tauri build --bundles nsis",
@@ -50,5 +52,10 @@
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
     "vitest": "^3.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

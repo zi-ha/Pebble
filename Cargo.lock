@@ -2933,6 +2933,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2532096657941c2fea9c289d370a250971c689d4f143798ff67113ec042024a5"
 
 [[package]]
+name = "md-5"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
+dependencies = [
+ "cfg-if",
+ "digest",
+]
+
+[[package]]
 name = "measure_time"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3569,7 +3579,7 @@ dependencies = [
 
 [[package]]
 name = "pebble"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "lettre",
  "mac-notification-sys",
@@ -3604,7 +3614,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-core"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "async-trait",
  "rusqlite",
@@ -3616,7 +3626,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-crypto"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "aes-gcm",
  "hex",
@@ -3631,7 +3641,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-mail"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "async-imap",
  "async-trait",
@@ -3658,7 +3668,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-oauth"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "oauth2",
  "pebble-core",
@@ -3673,7 +3683,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-privacy"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "ammonia",
  "htmlescape",
@@ -3684,7 +3694,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-rules"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "pebble-core",
  "serde",
@@ -3694,7 +3704,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-search"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "pebble-core",
  "tantivy",
@@ -3704,7 +3714,7 @@ dependencies = [
 
 [[package]]
 name = "pebble-store"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "pebble-core",
  "r2d2",
@@ -3721,12 +3731,19 @@ dependencies = [
 
 [[package]]
 name = "pebble-translate"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
+ "base64 0.22.1",
+ "hex",
+ "hmac",
+ "md-5",
  "pebble-core",
+ "percent-encoding",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha1",
+ "sha2",
  "tokio",
  "tracing",
 ]

@@ -6,6 +6,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-07
+
+### Added
+
+- Added Huawei Cloud text translation (华为云文本翻译) and Caiyun Xiaoyi (彩云小译) to the translation engines, alongside the built-in Microsoft endpoint and the DeepLX, DeepL, Baidu, Tencent Cloud, Alibaba Cloud and Volcengine options. Huawei needs the AK/SK pair plus the project ID; Caiyun needs a single access token and only translates between Chinese, English and Japanese.
+
+### Changed
+
+- Update checks and the About page now point at `zi-ha/Pebble`.
+- The release workflow no longer fails when no OAuth credentials are configured: a build without them warns and continues instead, since a fork without a Google/Microsoft OAuth client can still ship (only Gmail/Outlook OAuth sign-in is unavailable; IMAP and POP3 keep working). A partially configured set is still an error.
+- Release tags without a patch number (for example `0.20`) are compared numerically instead of as raw strings, so they register correctly as newer than `0.1.6`.
+- The mail area is always three columns now: sidebar, message list, reading pane. The list keeps a fixed width and the reading pane stays mounted with a "no message selected" placeholder instead of collapsing.
+- Removed the batch-selection and thread/message view buttons, along with the thread view itself — mail is only shown as individual messages.
+- Removed the back button from the reading pane header; selecting another message or switching folders replaces the content.
+- Sectioned the message list by day (Today / Yesterday / This week / Earlier) and lightened the rows to match: 68px tall, inset 8px selection instead of a full-bleed band, hairline-free rows.
+- Added a sender monogram avatar to the reading pane header, aligned with the one-line sender/date row.
+- Search now lives in the sidebar: the inbox toolbar and the search view no longer carry their own search box, and results render in the main area while you type.
+- The collapsed sidebar, the command palette entry and the search shortcut all focus the sidebar search box.
+- Compacted the reading pane header in the style of Apple Mail: the sender line is a single row (sender + date) and recipients/address details expand from it, giving roughly 60px more height to the message body. Attachments are capped at 38% of the pane instead of pushing the body short.
+
+### Fixed
+
+- Fixed the Starred entry disappearing from the classic sidebar when the account had no drafts folder.
+- Fixed IMAP polling treating a connection reset (`os error 10054`) as fatal: the socket was never re-established, so polling kept failing on the same folder and repeated the error. Socket-level errno values are now parsed from the formatted error and retried after a reconnect.
+
 ## [0.1.6] - 2026-11-05
 
 ### Added
@@ -362,20 +387,21 @@ This release includes:
 - Windows installers are not code-signed yet, so Windows SmartScreen may show a warning.
 - Outlook support is still experimental and depends on Microsoft Graph permissions configured by the user.
 
-[Unreleased]: https://github.com/QingJ01/Pebble/compare/v0.1.6...HEAD
-[0.1.6]: https://github.com/QingJ01/Pebble/compare/v0.1.5...v0.1.6
-[0.1.5]: https://github.com/QingJ01/Pebble/compare/v0.1.4...v0.1.5
-[0.1.4]: https://github.com/QingJ01/Pebble/compare/v0.1.3...v0.1.4
-[0.1.3]: https://github.com/QingJ01/Pebble/compare/v0.1.2...v0.1.3
-[0.1.2]: https://github.com/QingJ01/Pebble/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/QingJ01/Pebble/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/QingJ01/Pebble/compare/v0.0.9...v0.1.0
-[0.0.9]: https://github.com/QingJ01/Pebble/compare/v0.0.8...v0.0.9
-[0.0.8]: https://github.com/QingJ01/Pebble/compare/v0.0.7...v0.0.8
-[0.0.7]: https://github.com/QingJ01/Pebble/compare/v0.0.6...v0.0.7
-[0.0.6]: https://github.com/QingJ01/Pebble/compare/v0.0.5...v0.0.6
-[0.0.5]: https://github.com/QingJ01/Pebble/compare/v0.0.4...v0.0.5
-[0.0.4]: https://github.com/QingJ01/Pebble/compare/v0.0.3...v0.0.4
-[0.0.3]: https://github.com/QingJ01/Pebble/compare/v0.0.2...v0.0.3
-[0.0.2]: https://github.com/QingJ01/Pebble/compare/v0.0.1...v0.0.2
-[0.0.1]: https://github.com/QingJ01/Pebble/releases/tag/v0.0.1
+[Unreleased]: https://github.com/zi-ha/Pebble/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/zi-ha/Pebble/compare/v0.1.6...v0.1.7
+[0.1.6]: https://github.com/zi-ha/Pebble/compare/v0.1.5...v0.1.6
+[0.1.5]: https://github.com/zi-ha/Pebble/compare/v0.1.4...v0.1.5
+[0.1.4]: https://github.com/zi-ha/Pebble/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/zi-ha/Pebble/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/zi-ha/Pebble/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/zi-ha/Pebble/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/zi-ha/Pebble/compare/v0.0.9...v0.1.0
+[0.0.9]: https://github.com/zi-ha/Pebble/compare/v0.0.8...v0.0.9
+[0.0.8]: https://github.com/zi-ha/Pebble/compare/v0.0.7...v0.0.8
+[0.0.7]: https://github.com/zi-ha/Pebble/compare/v0.0.6...v0.0.7
+[0.0.6]: https://github.com/zi-ha/Pebble/compare/v0.0.5...v0.0.6
+[0.0.5]: https://github.com/zi-ha/Pebble/compare/v0.0.4...v0.0.5
+[0.0.4]: https://github.com/zi-ha/Pebble/compare/v0.0.3...v0.0.4
+[0.0.3]: https://github.com/zi-ha/Pebble/compare/v0.0.2...v0.0.3
+[0.0.2]: https://github.com/zi-ha/Pebble/compare/v0.0.1...v0.0.2
+[0.0.1]: https://github.com/zi-ha/Pebble/releases/tag/v0.0.1

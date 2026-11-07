@@ -482,14 +482,15 @@ impl Store {
 
     pub fn list_starred_messages(
         &self,
-        account_id: &str,
+        account_id: Option<&str>,
         limit: u32,
         offset: u32,
     ) -> Result<Vec<MessageSummary>> {
         self.with_read(|conn| {
+            // `None` means the combined "all accounts" mailbox.
             let sql = format!(
                 "SELECT m.{} FROM messages m
-                 WHERE m.account_id = ?1 AND m.is_starred = 1 AND m.is_deleted = 0
+                 WHERE (?1 IS NULL OR m.account_id = ?1) AND m.is_starred = 1 AND m.is_deleted = 0
                  ORDER BY m.date DESC
                  LIMIT ?2 OFFSET ?3",
                 MSG_SUMMARY_SELECT.replace(", ", ", m.")

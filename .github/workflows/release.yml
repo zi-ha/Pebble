@@ -94,13 +94,26 @@ jobs:
           MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
         run: |
           $ErrorActionPreference = "Stop"
-          foreach ($name in @("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "MICROSOFT_CLIENT_ID")) {
-            $value = [Environment]::GetEnvironmentVariable($name)
-            if ([string]::IsNullOrWhiteSpace($value)) {
-              throw "$name is not configured in the 'action' GitHub environment."
+          # OAuth client IDs are baked into the binary at compile time, so a build
+          # without them simply has no Gmail/Outlook OAuth sign-in. That is fine
+          # for a personal fork, so only an *incomplete* set is an error.
+          $required = @("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "MICROSOFT_CLIENT_ID")
+          $missing = @()
+          foreach ($name in $required) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              $missing += $name
             }
           }
-          "OAuth client IDs and Google client secret are configured for this release build."
+
+          if ($missing.Count -eq 0) {
+            "OAuth client IDs and Google client secret are configured for this release build."
+            exit 0
+          }
+          if ($missing.Count -eq $required.Count) {
+            Write-Warning "OAuth is not configured. This build cannot sign in to Gmail or Outlook through OAuth; IMAP/POP3 accounts still work. To ship OAuth-enabled builds, set GOOGLE_CLIENT_ID and MICROSOFT_CLIENT_ID as repository variables and GOOGLE_CLIENT_SECRET as a secret."
+            exit 0
+          }
+          throw "Incomplete OAuth configuration; missing: $($missing -join ', '). Set all of them or none."
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -243,13 +256,27 @@ jobs:
           MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-          for name in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID; do
+          # OAuth client IDs are baked into the binary at compile time, so a build
+          # without them simply has no Gmail/Outlook OAuth sign-in. That is fine
+          # for a personal fork, so only an *incomplete* set is an error.
+          required=(GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID)
+          missing=()
+          for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
-              echo "$name is not configured in the 'action' GitHub environment." >&2
-              exit 1
+              missing+=("$name")
             fi
           done
-          echo "OAuth client IDs and Google client secret are configured for this release build."
+
+          if [[ ${#missing[@]} -eq 0 ]]; then
+            echo "OAuth client IDs and Google client secret are configured for this release build."
+            exit 0
+          fi
+          if [[ ${#missing[@]} -eq ${#required[@]} ]]; then
+            echo "::warning::OAuth is not configured. This build cannot sign in to Gmail or Outlook through OAuth; IMAP/POP3 accounts still work. To ship OAuth-enabled builds, set GOOGLE_CLIENT_ID and MICROSOFT_CLIENT_ID as repository variables and GOOGLE_CLIENT_SECRET as a secret."
+            exit 0
+          fi
+          echo "Incomplete OAuth configuration; missing: ${missing[*]}. Set all of them or none." >&2
+          exit 1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -390,13 +417,27 @@ jobs:
           MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-          for name in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID; do
+          # OAuth client IDs are baked into the binary at compile time, so a build
+          # without them simply has no Gmail/Outlook OAuth sign-in. That is fine
+          # for a personal fork, so only an *incomplete* set is an error.
+          required=(GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID)
+          missing=()
+          for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
-              echo "$name is not configured in the 'action' GitHub environment." >&2
-              exit 1
+              missing+=("$name")
             fi
           done
-          echo "OAuth client IDs and Google client secret are configured for this release build."
+
+          if [[ ${#missing[@]} -eq 0 ]]; then
+            echo "OAuth client IDs and Google client secret are configured for this release build."
+            exit 0
+          fi
+          if [[ ${#missing[@]} -eq ${#required[@]} ]]; then
+            echo "::warning::OAuth is not configured. This build cannot sign in to Gmail or Outlook through OAuth; IMAP/POP3 accounts still work. To ship OAuth-enabled builds, set GOOGLE_CLIENT_ID and MICROSOFT_CLIENT_ID as repository variables and GOOGLE_CLIENT_SECRET as a secret."
+            exit 0
+          fi
+          echo "Incomplete OAuth configuration; missing: ${missing[*]}. Set all of them or none." >&2
+          exit 1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

@@ -11,15 +11,15 @@
 <p align="center">
   <a href="README.zh-CN.md">简体中文</a>
   ·
-  <a href="https://github.com/QingJ01/Pebble/releases">Releases</a>
+  <a href="https://github.com/zi-ha/Pebble/releases">Releases</a>
   ·
   <a href="LICENSE">License</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/QingJ01/Pebble/releases"><img src="https://img.shields.io/github/v/release/QingJ01/Pebble?style=flat-square&color=d4714e" alt="Release"></a>
+  <a href="https://github.com/zi-ha/Pebble/releases"><img src="https://img.shields.io/github/v/release/zi-ha/Pebble?style=flat-square&color=d4714e" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="License"></a>
-  <a href="https://github.com/QingJ01/Pebble/actions"><img src="https://img.shields.io/github/actions/workflow/status/QingJ01/Pebble/ci.yml?style=flat-square&label=build" alt="Build"></a>
+  <a href="https://github.com/zi-ha/Pebble/actions"><img src="https://img.shields.io/github/actions/workflow/status/zi-ha/Pebble/ci.yml?style=flat-square&label=build" alt="Build"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Platform">
 </p>
 
@@ -110,7 +110,7 @@ Pebble currently supports Gmail, IMAP, POP3, and experimental Outlook accounts.
 
 ### Install
 
-Download prebuilt desktop packages from the [Releases](https://github.com/QingJ01/Pebble/releases) page.
+Download prebuilt desktop packages from the [Releases](https://github.com/zi-ha/Pebble/releases) page.
 
 On Arch Linux, Pebble is available from the AUR as `pebble-bin`:
 
@@ -142,7 +142,7 @@ The selected directory is used on the next app launch.
 ### Development Setup
 
 ```bash
-git clone https://github.com/QingJ01/Pebble.git
+git clone https://github.com/zi-ha/Pebble.git
 cd Pebble
 
 pnpm install
@@ -243,16 +243,6 @@ Pebble/
 
 Shortcuts can be reviewed and customized in Settings.
 
-## Pebble Web
-
-Looking for a self-hosted web version? **[Pebble Web](https://github.com/QingJ01/Pebble-Web)** provides the same features as the desktop app, accessible from any browser via Docker.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/QingJ01/Pebble-Web/main/docker-compose.yml -o docker-compose.yml && docker compose up -d
-```
-
-Pebble Web shares the same Rust core crates and React frontend. Deploy it on your own server and access your email anywhere.
-
 ## Status
 
 Pebble is under active development. It is usable for day-to-day testing, but mail clients handle sensitive data and provider behavior varies. Keep backups of important mail, and verify account actions against your provider when testing new builds.
@@ -276,7 +266,7 @@ Pebble is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 ---
 
 <p align="center">
-  Built by <a href="https://github.com/QingJ01">QingJ</a>.
+  Built by <a href="https://github.com/zi-ha">zi-ha</a>.
   <br>
   Friend link: <a href="https://linux.do">LINUX DO</a>
 </p>

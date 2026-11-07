@@ -527,13 +527,58 @@ fn idle_check_recovery_user_error(
     None
 }
 
+/// Socket-level errno values that always mean "this connection is gone, a new
+/// one will work". Both POSIX (Linux/macOS) and Winsock (Windows) codes are
+/// listed because the io::Error text is all we get after it has been formatted
+/// into a `PebbleError::Network` string.
+const RETRYABLE_SOCKET_OS_ERRORS: &[u32] = &[
+    32,    // EPIPE
+    104,   // ECONNRESET
+    110,   // ETIMEDOUT
+    111,   // ECONNREFUSED
+    10052, // WSAENETRESET
+    10053, // WSAECONNABORTED
+    10054, // WSAECONNRESET — "远程主机强迫关闭了一个现有的连接"
+    10057, // WSAENOTCONN
+    10058, // WSAESHUTDOWN
+    10060, // WSAETIMEDOUT
+    10061, // WSAECONNREFUSED
+];
+
+/// Look for `os error <n>` inside a formatted io error and check whether `<n>`
+/// is a socket error that a reconnect can recover from.
+///
+/// Matching on the formatted text is unavoidable here (the original io::Error
+/// kind is lost by the time it reaches the poll loop), but parsing the numeric
+/// code is still far more robust than matching localized Windows messages.
+fn has_retryable_socket_os_error(message: &str) -> bool {
+    const NEEDLE: &str = "os error ";
+
+    let lower = message.to_ascii_lowercase();
+    let mut rest = lower.as_str();
+    while let Some(index) = rest.find(NEEDLE) {
+        rest = &rest[index + NEEDLE.len()..];
+        let digits: String = rest.chars().take_while(|ch| ch.is_ascii_digit()).collect();
+        if digits.is_empty() {
+            continue;
+        }
+        if let Ok(code) = digits.parse::<u32>() {
+            if RETRYABLE_SOCKET_OS_ERRORS.contains(&code) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 fn is_retryable_imap_connection_error(error: &PebbleError) -> bool {
     let PebbleError::Network(message) = error else {
         return false;
     };
     let lower = message.to_ascii_lowercase();
 
-    lower.contains("os error 10053")
+    has_retryable_socket_os_error(&lower)
         || lower.contains("connection reset")
         || lower.contains("connection aborted")
         || lower.contains("broken pipe")
@@ -543,6 +588,10 @@ fn is_retryable_imap_connection_error(error: &PebbleError) -> bool {
         || lower.contains("unexpected eof")
         || lower.contains("unexpected-eof")
         || lower.contains("timed out")
+        // Windows localizes io errors, so keep the zh-CN wording as a fallback
+        // for the rare case where the "os error <n>" suffix is missing.
+        || lower.contains("远程主机强迫关闭")
+        || lower.contains("中止了一个已建立的连接")
         || lower == "not connected"
 }
 
@@ -3225,6 +3274,38 @@ mod tests {
         );
 
         assert!(is_retryable_imap_connection_error(&error));
+    }
+
+    #[test]
+    fn imap_windows_connection_reset_is_retryable_for_polling() {
+        // Exactly what Windows reports when the server drops an idle socket
+        // mid-SELECT (WSAECONNRESET). Polling used to treat this as fatal, so it
+        // never reconnected and the same folder failed forever.
+        let error = pebble_core::PebbleError::Network(
+            "SELECT failed: io: 远程主机强迫关闭了一个现有的连接。 (os error 10054)".to_string(),
+        );
+
+        assert!(is_retryable_imap_connection_error(&error));
+    }
+
+    #[test]
+    fn imap_posix_connection_reset_is_retryable_for_polling() {
+        let error = pebble_core::PebbleError::Network(
+            "SELECT failed: io: Connection reset (os error 104)".to_string(),
+        );
+
+        assert!(is_retryable_imap_connection_error(&error));
+    }
+
+    #[test]
+    fn imap_os_error_codes_are_matched_as_whole_numbers() {
+        // "os error 5" (access denied) must not be mistaken for a reset just
+        // because it shares a prefix with a retryable code.
+        let error = pebble_core::PebbleError::Network(
+            "SELECT failed: io: Access is denied. (os error 5)".to_string(),
+        );
+
+        assert!(!is_retryable_imap_connection_error(&error));
     }
 
     #[test]

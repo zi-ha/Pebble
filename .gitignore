@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+# npm is not used in this repo; pnpm-lock.yaml is the source of truth
+package-lock.json
 
 # Build output
 target/
@@ -41,3 +43,4 @@ pnpm-debug.log
 
 # Claude Code
 .claude/
+.workbuddy/

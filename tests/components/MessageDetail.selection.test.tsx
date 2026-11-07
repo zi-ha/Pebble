@@ -71,6 +71,7 @@ vi.mock("../../src/hooks/useMessageLoader", () => ({
     message: {
       ...(messageId === "message-bulk" ? bulkMessage : mockMessage),
       id: messageId,
+      has_attachments: messageId === "message-with-attachments",
       from_address: messageId === "message-1" ? "sender@example.com" : "second@example.com",
     },
     setMessage: vi.fn(),
@@ -188,40 +189,88 @@ describe("MessageDetail selected-text context actions", () => {
     expect(body.className).toContain("message-body-scroll");
   });
 
+  it("keeps attachments at the end of the message body instead of docking them below the pane", () => {
+    render(<MessageDetail messageId="message-with-attachments" onBack={vi.fn()} />);
+
+    const body = screen.getByRole("region", { name: "Message body" });
+    const attachments = screen.getByText("attachments");
+
+    // Attachments scroll with the text, so they must be inside the body region
+    // and be its last block — not a sibling taking fixed height from the pane.
+    expect(body.contains(attachments)).toBe(true);
+    expect(body.lastElementChild).toBe(attachments);
+  });
+
+  it("does not render a back button in the reading pane header", () => {
+    render(<MessageDetail messageId="message-1" onBack={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "compose.back" })).toBeNull();
+  });
+
   it("shows message recipients instead of the account email in the header", () => {
     render(<MessageDetail messageId="message-1" onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show message details" }));
 
     expect(screen.getAllByText(/destination@example\.com/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/cc@example\.com/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/current@example\.com/)).toBeNull();
   });
 
-  it("renders the sender line as a semibold header card with a right-aligned date", () => {
+  it("keeps the sender line to one row and expands the details on demand", () => {
     render(<MessageDetail messageId="message-1" onBack={vi.fn()} />);
 
     const heading = screen.getByRole("heading", { name: "Context actions" });
+    expect(heading.className).toContain("message-detail-subject");
 
-    expect(heading.style.fontSize).toBe("16px");
+    expect(screen.getByText("Sender")).toBeTruthy();
+    expect(screen.getByText(/2023/)).toBeTruthy();
 
-    const senderName = screen.getByText("Sender");
+    // Recipients stay collapsed so the message body gets the vertical space.
+    const toggle = screen.getByRole("button", { name: "Show message details" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText(/destination@example\.com/)).toBeNull();
 
-    expect(senderName.style.fontWeight).toBe("600");
+    fireEvent.click(toggle);
 
-    const senderRow = senderName.parentElement as HTMLElement;
-    const card = senderRow.parentElement as HTMLElement;
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getAllByText(/destination@example\.com/).length).toBeGreaterThan(0);
+  });
 
-    expect(senderRow.style.fontSize).toBe("13px");
-    expect(card.style.borderRadius).toBe("8px");
-    expect(card.style.padding).toBe("8px 12px");
+  it("puts every action on one row with the view toggles pinned right, above the subject", () => {
+    render(<MessageDetail messageId="message-1" onBack={vi.fn()} />);
 
-    const dateSpan = Array.from(senderRow.querySelectorAll("span"))
-      .find((node) => node.style.marginLeft === "auto");
+    const actionRow = document.querySelector(".message-detail-actions") as HTMLElement;
+    const rightGroup = document.querySelector(".message-detail-actions-right") as HTMLElement;
+    const heading = screen.getByRole("heading", { name: "Context actions" });
 
-    expect(dateSpan?.textContent).toContain("2023");
+    expect(actionRow).toBeTruthy();
+    expect(rightGroup).toBeTruthy();
+
+    // Message actions stay on the left of the row.
+    const toolbar = screen.getByText("message actions");
+    expect(actionRow.contains(toolbar)).toBe(true);
+    expect(rightGroup.contains(toolbar)).toBe(false);
+    expect(
+      toolbar.compareDocumentPosition(rightGroup) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    // The former right-aligned toggles keep the right edge.
+    expect(rightGroup.contains(screen.getByRole("button", { name: "Snooze message" }))).toBe(true);
+    expect(rightGroup.contains(screen.getByRole("button", { name: "Toggle bilingual view" }))).toBe(true);
+
+    // The subject moved below the action row.
+    expect(actionRow.contains(heading)).toBe(false);
+    expect(
+      actionRow.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("offers contact actions for the sender and each visible recipient", () => {
     render(<MessageDetail messageId="message-1" onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show message details" }));
 
     expect(screen.getAllByTestId("contact-address-action").map((node) => node.textContent)).toEqual([
       "sender@example.com",
@@ -232,6 +281,8 @@ describe("MessageDetail selected-text context actions", () => {
 
   it("collapses bulk recipient lists behind a more toggle", () => {
     render(<MessageDetail messageId="message-bulk" onBack={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show message details" }));
 
     expect(screen.getAllByTestId("contact-address-action")).toHaveLength(4);
     expect(screen.getByRole("button", { name: "+7 more" })).toBeTruthy();

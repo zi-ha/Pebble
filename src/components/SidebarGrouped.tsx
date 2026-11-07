@@ -10,7 +10,6 @@ import {
   Trash2,
   LayoutGrid,
   Settings,
-  Search,
   Clock,
   Star,
   ContactRound,
@@ -19,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import SidebarSearch from "./SidebarSearch";
 import { useUIStore } from "../stores/ui.store";
 import { isComposeDirty, useComposeStore } from "../stores/compose.store";
 import { useConfirmStore } from "../stores/confirm.store";
@@ -205,17 +205,8 @@ export default function SidebarGrouped() {
         overflow: "hidden",
       }}
     >
-      {/* Search button */}
-      <nav aria-label={t("sidebar.search", "Search")} style={{ padding: "8px 6px 0", display: "flex", flexDirection: "column", gap: "1px" }}>
-        <SidebarButton
-          icon={<Search size={16} />}
-          label={t("search.title", "Search")}
-          isActive={activeView === "search"}
-          collapsed={sidebarCollapsed}
-          style={buttonBase}
-          onClick={() => safeSetActiveView("search")}
-        />
-      </nav>
+      {/* Search box (single search entry for the whole app) */}
+      <SidebarSearch collapsed={sidebarCollapsed} />
 
       {/* Section label */}
       {!sidebarCollapsed && (

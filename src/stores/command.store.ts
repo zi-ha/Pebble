@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSingleton } from "./singleton";
 
 export interface Command {
   id: string;
@@ -20,7 +21,8 @@ interface CommandState {
   registerCommands: (cmds: Command[]) => void;
 }
 
-export const useCommandStore = create<CommandState>((set, get) => ({
+export const useCommandStore = createSingleton("command", () =>
+  create<CommandState>((set, get) => ({
   isOpen: false,
   query: "",
   commands: [],
@@ -52,4 +54,5 @@ export const useCommandStore = create<CommandState>((set, get) => ({
 
   registerCommands: (cmds: Command[]) =>
     set({ commands: cmds, filteredCommands: cmds }),
-}));
+  })),
+);

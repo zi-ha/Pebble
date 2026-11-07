@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Clock, Languages } from "lucide-react";
+import { ChevronDown, Clock, Languages } from "lucide-react";
 import { trustSender } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import type { PrivacyMode, TranslateResult } from "@/lib/api";
@@ -47,12 +47,16 @@ export default function MessageDetail({ messageId, onBack, folderRole }: Props) 
     ? privacyOverride.mode
     : defaultPrivacyMode();
   const [showSnooze, setShowSnooze] = useState(false);
+  // Apple Mail puts the sender/recipient block behind a disclosure so the body
+  // gets the vertical space. Collapsed until the user asks for it.
+  const [showDetails, setShowDetails] = useState(false);
   const [showSelectionActions, setShowSelectionActions] = useState<{ text: string; position: { x: number; y: number } } | null>(null);
   const [showTranslate, setShowTranslate] = useState<{ text: string; position: { x: number; y: number } } | null>(null);
 
   const snoozeRef = useRef<HTMLDivElement>(null);
   const selectionActionsRef = useRef<HTMLDivElement>(null);
   const translateRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
 
   const { message, setMessage, rendered, loading, error } = useMessageLoader(messageId, privacyMode);
   const { bilingualMode, bilingualResult, bilingualLoading, handleBilingualToggle, resetBilingual } = useBilingualTranslation(messageId, rendered, message);
@@ -64,7 +68,12 @@ export default function MessageDetail({ messageId, onBack, folderRole }: Props) 
   // Reset bilingual state when messageId changes
   useEffect(() => {
     setPrivacyOverride({ messageId, mode: defaultPrivacyMode() });
+    setShowDetails(false);
     resetBilingual();
+    // The body keeps its scroll position across messages, and attachments now
+    // live at the end of that scroll area — without this, opening a new message
+    // would land on the attachment block instead of the top of the text.
+    if (bodyScrollRef.current) bodyScrollRef.current.scrollTop = 0;
   }, [messageId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleLoadImages() {
@@ -230,124 +239,98 @@ export default function MessageDetail({ messageId, onBack, folderRole }: Props) 
         height: "100%",
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          padding: "12px 16px",
-          borderBottom: "1px solid var(--color-border)",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-          <button
-            onClick={onBack}
-            aria-label={t("compose.back", "Back")}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              borderRadius: "4px",
-              color: "var(--color-text-secondary)",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h2
-            style={{
-              fontSize: "16px",
-              fontWeight: "600",
-              color: "var(--color-text-primary)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              margin: 0,
-            }}
-          >
-            {message.subject || t("inbox.noSubject", "(no subject)")}
-          </h2>
-          <div ref={snoozeRef} style={{ position: "relative", marginLeft: "auto", flexShrink: 0 }}>
+      {/* Header — one action row, then the subject, then the sender line */}
+      <div className="message-detail-header">
+        <div className="message-detail-actions">
+          <MessageActionToolbar
+            message={message}
+            folderRole={folderRole}
+            onBack={onBack}
+            onMessageUpdate={setMessage}
+          />
+          {/*
+           * View toggles used to sit on the right of the subject line; they keep
+           * that position, now sharing the action row with the message actions.
+           */}
+          <div className="message-detail-actions-right">
+            <div ref={snoozeRef} style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => setShowSnooze(!showSnooze)}
+                className="message-detail-icon-btn"
+                title={t("messageActions.snooze", "Snooze message")}
+                aria-label={t("messageActions.snooze", "Snooze message")}
+              >
+                <Clock size={16} />
+              </button>
+              {showSnooze && (
+                <SnoozePopover
+                  messageId={messageId}
+                  onClose={() => setShowSnooze(false)}
+                  onSnoozed={() => {
+                    setShowSnooze(false);
+                    onBack();
+                  }}
+                />
+              )}
+            </div>
             <button
-              onClick={() => setShowSnooze(!showSnooze)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "4px",
-                borderRadius: "4px",
-                color: "var(--color-text-secondary)",
-                display: "flex",
-                alignItems: "center",
-              }}
-              title={t("messageActions.snooze", "Snooze message")}
-              aria-label={t("messageActions.snooze", "Snooze message")}
+              type="button"
+              onClick={handleBilingualToggle}
+              aria-pressed={bilingualMode}
+              className="message-detail-icon-btn"
+              title={t("messageActions.bilingualView", "Toggle bilingual view")}
+              aria-label={t("messageActions.bilingualView", "Toggle bilingual view")}
             >
-              <Clock size={16} />
+              <Languages size={16} />
             </button>
-            {showSnooze && (
-              <SnoozePopover
-                messageId={messageId}
-                onClose={() => setShowSnooze(false)}
-                onSnoozed={() => {
-                  setShowSnooze(false);
-                  onBack();
-                }}
-              />
-            )}
           </div>
+        </div>
+
+        <h2 className="message-detail-subject">
+          {message.subject || t("inbox.noSubject", "(no subject)")}
+        </h2>
+
+        {/* Sender line — one row, details on demand */}
+        <div className="message-detail-meta">
+          <span className="message-detail-avatar" aria-hidden="true">
+            {(message.from_name?.trim() || message.from_address || "?").slice(0, 1).toUpperCase()}
+          </span>
           <button
-            onClick={handleBilingualToggle}
-            aria-pressed={bilingualMode}
-            style={{
-              background: bilingualMode ? "var(--color-bg-hover)" : "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              borderRadius: "4px",
-              color: bilingualMode ? "var(--color-accent)" : "var(--color-text-secondary)",
-              display: "flex",
-              alignItems: "center",
-              flexShrink: 0,
-            }}
-            title={t("messageActions.bilingualView", "Toggle bilingual view")}
-            aria-label={t("messageActions.bilingualView", "Toggle bilingual view")}
+            type="button"
+            className="message-detail-meta-toggle"
+            aria-expanded={showDetails}
+            aria-label={t("messageDetail.showDetails", "Show message details")}
+            title={t("messageDetail.showDetails", "Show message details")}
+            onClick={() => setShowDetails((open) => !open)}
           >
-            <Languages size={16} />
+            <span className="message-detail-meta-name">
+              {message.from_name || message.from_address}
+            </span>
+            <span className="message-detail-meta-date">{formatFullDate(message.date)}</span>
+            <ChevronDown
+              size={13}
+              aria-hidden="true"
+              style={{
+                flexShrink: 0,
+                transition: "transform 0.15s ease",
+                transform: showDetails ? "rotate(180deg)" : "none",
+              }}
+            />
           </button>
         </div>
-        {/* Action Toolbar */}
-        <MessageActionToolbar
-          message={message}
-          folderRole={folderRole}
-          onBack={onBack}
-          onMessageUpdate={setMessage}
-        />
-        <div style={{ paddingLeft: "32px" }}>
-          <div
-            style={{
-              backgroundColor: "var(--color-bg-hover)",
-              borderRadius: "8px",
-              padding: "8px 12px",
-              color: "var(--color-text-primary)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "13px",
-                marginBottom: "2px",
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "4px",
-              }}
-            >
-              <span style={{ fontWeight: "600" }}>
+
+        {showDetails && (
+          <div className="message-detail-details">
+            <div className="message-detail-from">
+              <span style={{ color: "var(--color-text-secondary)" }}>
+                {t("messageDetail.from", "From:")}
+              </span>
+              <span style={{ fontWeight: 600 }}>
                 {message.from_name || message.from_address}
               </span>
               {message.from_name && (
-                <span style={{ fontSize: "12px", color: "var(--color-text-secondary)", marginLeft: "2px" }}>
+                <span style={{ color: "var(--color-text-secondary)" }}>
                   &lt;{message.from_address}&gt;
                 </span>
               )}
@@ -356,20 +339,10 @@ export default function MessageDetail({ messageId, onBack, folderRole }: Props) 
                 name={message.from_name}
                 address={message.from_address}
               />
-              <span
-                style={{
-                  fontSize: "12px",
-                  color: "var(--color-text-secondary)",
-                  marginLeft: "auto",
-                  flexShrink: 0,
-                }}
-              >
-                {formatFullDate(message.date)}
-              </span>
             </div>
             <MessageParticipants accountId={message.account_id} groups={contactParticipantsGroups} />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Privacy Banner */}
@@ -381,8 +354,10 @@ export default function MessageDetail({ messageId, onBack, folderRole }: Props) 
         />
       )}
 
-      {/* Body */}
+      {/* Body — attachments are part of the flow so they only show up once the
+          reader scrolls past the text, instead of eating fixed pane height */}
       <div
+        ref={bodyScrollRef}
         className="scroll-region message-body-scroll"
         tabIndex={0}
         role="region"
@@ -428,10 +403,9 @@ export default function MessageDetail({ messageId, onBack, folderRole }: Props) 
             {message.body_text}
           </pre>
         )}
-      </div>
 
-      {/* Attachments */}
-      {message.has_attachments && <AttachmentList messageId={message.id} />}
+        {message.has_attachments && <AttachmentList messageId={message.id} />}
+      </div>
 
       {showTranslate && (
         <div ref={translateRef}>

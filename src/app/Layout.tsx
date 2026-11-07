@@ -84,6 +84,23 @@ export default function Layout() {
   useTrayI18n();
   useMailtoOpen();
 
+  // Dev escape hatch. Desktop webviews ignore the browser's own F5 / Ctrl+R, so
+  // whenever a hot update failed to apply there was no way to pick up the new
+  // code without restarting the whole `tauri dev` process.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const handleReloadKey = (event: KeyboardEvent) => {
+      const isReload =
+        event.key === "F5" ||
+        ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "r");
+      if (!isReload) return;
+      event.preventDefault();
+      window.location.reload();
+    };
+    window.addEventListener("keydown", handleReloadKey);
+    return () => window.removeEventListener("keydown", handleReloadKey);
+  }, []);
+
   // Re-register commands when language changes
   useEffect(() => {
     useCommandStore.getState().registerCommands(buildCommands(t));

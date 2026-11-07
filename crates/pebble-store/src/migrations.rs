@@ -2,7 +2,7 @@ use pebble_core::{build_snippet, PebbleError, Result};
 use rusqlite::{Connection, OptionalExtension};
 use std::collections::HashSet;
 
-const CURRENT_VERSION: u32 = 18;
+const CURRENT_VERSION: u32 = 19;
 const ACCOUNT_COLOR_PRESETS: [&str; 12] = [
     "#0ea5e9", "#22c55e", "#f59e0b", "#8b5cf6", "#f43f5e", "#14b8a6", "#6366f1", "#f97316",
     "#06b6d4", "#ec4899", "#84cc16", "#3b82f6",
@@ -973,6 +973,47 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
                 ALTER TABLE accounts ADD COLUMN oauth_subject TEXT;",
             )?;
         }
+        set_schema_version(&tx, 18)?;
+        tx.commit()?;
+    }
+
+    if version < 19 {
+        let tx = conn.unchecked_transaction()?;
+        // V1 pinned `provider_type` to a fixed CHECK list. That list went stale
+        // the moment a new engine (Microsoft, Baidu, Tencent, Alibaba,
+        // Volcengine…) was added, so saving those configs failed outright.
+        // Rebuild the table without the constraint: the column is a free-form
+        // tag, and the encrypted config JSON already carries the real `type`.
+        if table_exists(&tx, "translate_config")? {
+            tx.execute_batch(
+                "ALTER TABLE translate_config RENAME TO translate_config_v18;
+                 CREATE TABLE translate_config (
+                     id TEXT PRIMARY KEY DEFAULT 'active',
+                     provider_type TEXT NOT NULL,
+                     config TEXT NOT NULL DEFAULT '{}',
+                     is_enabled INTEGER NOT NULL DEFAULT 1,
+                     created_at INTEGER NOT NULL,
+                     updated_at INTEGER NOT NULL
+                 );
+                 INSERT INTO translate_config (id, provider_type, config, is_enabled, created_at, updated_at)
+                     SELECT id, provider_type, config, is_enabled, created_at, updated_at
+                     FROM translate_config_v18;
+                 DROP TABLE translate_config_v18;",
+            )
+            .map_err(|e| PebbleError::Storage(format!("Migration V19 failed: {e}")))?;
+        } else {
+            tx.execute_batch(
+                "CREATE TABLE translate_config (
+                     id TEXT PRIMARY KEY DEFAULT 'active',
+                     provider_type TEXT NOT NULL,
+                     config TEXT NOT NULL DEFAULT '{}',
+                     is_enabled INTEGER NOT NULL DEFAULT 1,
+                     created_at INTEGER NOT NULL,
+                     updated_at INTEGER NOT NULL
+                 );",
+            )
+            .map_err(|e| PebbleError::Storage(format!("Migration V19 failed: {e}")))?;
+        }
         set_schema_version(&tx, CURRENT_VERSION)?;
         tx.commit()?;
     }
@@ -1164,6 +1205,52 @@ mod tests {
                 .is_err(),
             "earlier ALTER must roll back when a later ALTER fails"
         );
+    }
+
+    #[test]
+    fn migration_v19_preserves_translate_config_and_drops_the_provider_check() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE translate_config (
+                 id TEXT PRIMARY KEY DEFAULT 'active',
+                 provider_type TEXT NOT NULL CHECK(provider_type IN ('deeplx', 'deepl', 'generic_api', 'llm')),
+                 config TEXT NOT NULL DEFAULT '{}',
+                 is_enabled INTEGER NOT NULL DEFAULT 1,
+                 created_at INTEGER NOT NULL,
+                 updated_at INTEGER NOT NULL
+             );
+             INSERT INTO translate_config (id, provider_type, config, is_enabled, created_at, updated_at)
+             VALUES ('active', 'deeplx', '{\"endpoint\":\"http://localhost:1188/translate\"}', 1, 10, 10);
+             PRAGMA user_version=18;",
+        )
+        .unwrap();
+
+        run_migrations(&conn).unwrap();
+
+        let version: u32 = conn
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, CURRENT_VERSION);
+
+        let (provider, config, enabled): (String, String, i64) = conn
+            .query_row(
+                "SELECT provider_type, config, is_enabled FROM translate_config WHERE id = 'active'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("the existing engine must survive the rebuild");
+        assert_eq!(provider, "deeplx");
+        assert_eq!(config, r#"{"endpoint":"http://localhost:1188/translate"}"#);
+        assert_eq!(enabled, 1);
+
+        // The engines added after V1 must be storable now.
+        conn.execute(
+            "INSERT OR REPLACE INTO translate_config
+                (id, provider_type, config, is_enabled, created_at, updated_at)
+             VALUES ('active', 'baidu', '{}', 1, 11, 11)",
+            [],
+        )
+        .expect("V19 must accept engines that were not in the V1 CHECK list");
     }
 
     #[test]

@@ -14,9 +14,6 @@ interface Props {
   isSelected: boolean;
   onClick: () => void;
   onToggleStar?: (messageId: string, newStarred: boolean) => void;
-  batchMode?: boolean;
-  batchSelected?: boolean;
-  onToggleBatchSelect?: (messageId: string) => void;
   spamFolderId?: string;
   folderRole?: Folder["role"];
   accountColor?: string;
@@ -46,7 +43,7 @@ function recipientLabel(addresses: EmailAddress[]): string {
   return addresses.map(addressLabel).filter(Boolean).join(", ");
 }
 
-function MessageItem({ message, labels = [], isSelected, onClick, onToggleStar, batchMode, batchSelected, onToggleBatchSelect, spamFolderId, folderRole, accountColor, accountLabel }: Props) {
+function MessageItem({ message, labels = [], isSelected, onClick, onToggleStar, spamFolderId, folderRole, accountColor, accountLabel }: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [showActions, setShowActions] = useState(false);
@@ -78,9 +75,10 @@ function MessageItem({ message, labels = [], isSelected, onClick, onToggleStar, 
         position: "relative",
         color: "var(--color-text-primary)",
         cursor: "pointer",
-        padding: "10px 14px",
-        borderBottom: "1px solid var(--color-border)",
-        height: "76px",
+        margin: "0 6px",
+        padding: "7px 10px",
+        borderRadius: "8px",
+        height: "68px",
         boxSizing: "border-box",
         overflow: "hidden",
         transition: "background-color 0.12s ease",
@@ -123,19 +121,6 @@ function MessageItem({ message, labels = [], isSelected, onClick, onToggleStar, 
         />
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
-        {batchMode && (
-          <input
-            type="checkbox"
-            checked={batchSelected}
-            aria-label={t("batch.selectMessage", "Select message")}
-            className="batch-checkbox message-row-checkbox"
-            onChange={(e) => {
-              e.stopPropagation();
-              onToggleBatchSelect?.(message.id);
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
         <span
           style={{
             display: "flex",

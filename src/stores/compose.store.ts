@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSingleton } from "./singleton";
 import type { Message } from "@/lib/api";
 import { useUIStore, type ActiveView } from "./ui.store";
 
@@ -44,7 +45,8 @@ export function isComposeDirty(): boolean {
   return ui.activeView === "compose" && compose.composeDirty;
 }
 
-export const useComposeStore = create<ComposeState>((set) => ({
+export const useComposeStore = createSingleton("compose", () =>
+  create<ComposeState>((set) => ({
   composeMode: null,
   composeReplyTo: null,
   composePrefill: null,
@@ -97,4 +99,5 @@ export const useComposeStore = create<ComposeState>((set) => ({
       ...getComposeResetState(),
     });
   },
-}));
+  })),
+);

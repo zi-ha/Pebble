@@ -257,36 +257,292 @@ option {
   background-color: var(--color-bg);
 }
 
+/* Sender meta line: one row by default, recipients behind a disclosure so the
+   body keeps the height (same pattern as Apple Mail). */
+.message-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 3px;
+  padding-left: 0;
+}
+
+/* Round sender monogram — mirrors the avatar block used by Apple Mail/Godwit
+   and gives the reading pane a stable visual anchor. */
+.message-detail-avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-bg));
+  color: color-mix(in srgb, var(--color-accent) 82%, var(--color-text-primary));
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.message-detail-meta-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  margin-left: -4px;
+  padding: 2px 6px 2px 4px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 18px;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.message-detail-meta-toggle:hover {
+  background: var(--color-bg-hover);
+}
+
+.message-detail-meta-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.message-detail-meta-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-detail-meta-date {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.message-detail-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 4px 34px;
+  font-size: 12.5px;
+  color: var(--color-text-primary);
+}
+
+.message-detail-from {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .app-shell--with-background .message-detail-container {
   background-color: transparent;
 }
 
-.message-list-row,
-.thread-list-row {
+/* ─── Fixed three-pane mail layout ──────────────────────── */
+/* Sidebar · message list · reading pane are all present at once, Apple Mail
+   style. The list keeps a stable width so the reading pane never reflows when
+   you open a message. */
+.mail-panes {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mail-list-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 clamp(272px, 24vw, 360px);
+  min-width: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--color-border);
+}
+
+.app-shell--with-background .mail-list-pane {
+  border-right-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.mail-list-pane--scroll {
+  overflow-y: auto;
+}
+
+/* The list has no title bar any more — the folder is already highlighted in the
+   sidebar. Destructive folder actions float over the top-right corner instead of
+   costing a whole row. */
+.mail-list-floating-action {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  opacity: 0.7;
+  backdrop-filter: blur(6px);
+  transition: background-color 0.14s ease, color 0.14s ease, opacity 0.14s ease;
+}
+
+.mail-list-floating-action:hover {
+  opacity: 1;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.message-detail-header {
+  flex-shrink: 0;
+  padding: 4px 16px 5px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 96%, var(--color-bg-secondary));
+}
+
+.app-shell--with-background .message-detail-header {
+  border-bottom-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 12%, transparent);
+}
+
+/* Row 1 of the reading pane: message actions on the left, view toggles pinned
+   to the right edge (they used to live at the end of the subject line). */
+.message-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.message-action-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  min-width: 0;
+  /* Pull the row out by the button padding so the glyphs line up with the
+     subject and sender text below. */
+  margin-left: -7px;
+}
+
+.message-detail-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: -7px;
+  flex: 0 0 auto;
+}
+
+.message-detail-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 7px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.message-detail-icon-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.message-detail-icon-btn[aria-pressed="true"] {
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
+}
+
+.message-detail-subject {
+  margin: 1px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-detail-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mail-detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.mail-detail-empty-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.mail-detail-empty-hint {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.message-list-row {
   background: transparent;
 }
 
-.message-list-row[aria-selected="true"],
-.thread-list-row[aria-selected="true"] {
+/* Day section header inside the message list (Today / Yesterday / …) */
+.message-list-section-label {
+  padding: 10px 16px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: color-mix(in srgb, var(--color-text-secondary) 90%, transparent);
+  user-select: none;
+}
+
+.message-list-row[aria-selected="true"] {
   background: var(--color-sidebar-active);
 }
 
 .message-list-row[aria-selected="false"]:hover,
-.message-list-row[aria-selected="false"]:focus,
-.thread-list-row[aria-selected="false"]:hover,
-.thread-list-row[aria-selected="false"]:focus {
+.message-list-row[aria-selected="false"]:focus {
   background: var(--color-bg-hover);
 }
 
 .message-list-row--unread[aria-selected="false"]:hover,
-.message-list-row--unread[aria-selected="false"]:focus,
-.thread-list-row--unread[aria-selected="false"]:hover,
-.thread-list-row--unread[aria-selected="false"]:focus {
+.message-list-row--unread[aria-selected="false"]:focus {
   background: var(--color-bg-hover);
 }
 
-.app-shell--with-background .message-list-row[aria-selected="true"],
-.app-shell--with-background .thread-list-row[aria-selected="true"] {
+.app-shell--with-background .message-list-row[aria-selected="true"] {
   background: color-mix(in srgb, var(--color-sidebar-active) 60%, transparent);
 }
 
@@ -693,50 +949,75 @@ textarea:focus-visible {
 
 /* ─── Search Controls ───────────────────────────────────── */
 
-.search-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg) 94%, var(--color-bg-secondary));
+/* Sidebar search box — the app's single search entry point */
+.sidebar-search {
+  padding: 8px 8px 2px;
 }
 
-.search-input-shell {
-  flex: 1;
-  min-width: 0;
-  height: 42px;
+.sidebar-search--collapsed {
+  display: flex;
+  justify-content: center;
+  padding: 8px 6px 2px;
+}
+
+.sidebar-search-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.sidebar-search-icon:hover,
+.sidebar-search-icon.is-active {
+  background: var(--color-sidebar-hover);
+  color: var(--color-text-primary);
+}
+
+.sidebar-search-shell {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 14px;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 7px;
   background: var(--color-bg);
+  color: var(--color-text-secondary);
   transition: border-color 0.14s ease, box-shadow 0.14s ease, background-color 0.14s ease;
 }
 
-.search-input-shell:focus-within {
+.sidebar-search-shell:hover {
+  border-color: color-mix(in srgb, var(--color-text-secondary) 32%, var(--color-border));
+}
+
+.sidebar-search-shell:focus-within {
   border-color: color-mix(in srgb, var(--color-accent) 46%, var(--color-border));
   box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
-.search-input-shell svg {
-  flex-shrink: 0;
-  color: color-mix(in srgb, var(--color-text-secondary) 86%, var(--color-text-primary));
+.sidebar-search-shell.is-active {
+  border-color: color-mix(in srgb, var(--color-accent) 46%, var(--color-border));
 }
 
-.app-shell--with-background .search-toolbar {
-  border-bottom-color: color-mix(in srgb, var(--color-border) 60%, transparent);
-  background: color-mix(in srgb, var(--color-bg) 12%, transparent);
-}
-
-.app-shell--with-background .search-input-shell {
+.app-shell--with-background .sidebar-search-shell {
   border-color: color-mix(in srgb, var(--color-border) 50%, transparent);
   background: color-mix(in srgb, var(--color-bg) 18%, transparent);
 }
 
-.search-input {
+.sidebar-search-glyph {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--color-text-secondary) 86%, var(--color-text-primary));
+}
+
+.sidebar-search-input {
   flex: 1;
   min-width: 0;
   border: 0;
@@ -744,79 +1025,102 @@ textarea:focus-visible {
   background: transparent;
   color: var(--color-text-primary);
   font: inherit;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 18px;
 }
 
-.search-input:focus-visible {
+.sidebar-search-input:focus-visible {
   outline: 0;
 }
 
-.search-input::placeholder {
+.sidebar-search-input::placeholder {
   color: color-mix(in srgb, var(--color-text-secondary) 82%, transparent);
 }
 
-.inbox-toolbar-row {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg) 96%, var(--color-bg-secondary));
+.sidebar-search-input::-webkit-search-cancel-button,
+.sidebar-search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.app-shell--with-background .inbox-toolbar-row {
-  border-bottom-color: color-mix(in srgb, var(--color-border) 60%, transparent);
-  background: color-mix(in srgb, var(--color-bg) 12%, transparent);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-border) 50%, transparent);
-}
-
-.inbox-toolbar-search {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.inbox-toolbar-search .search-toolbar {
-  border-bottom: 0;
-  background: transparent;
-}
-
-.app-shell--with-background .inbox-toolbar-search .search-toolbar {
-  background: transparent;
-  backdrop-filter: none;
-}
-
-.inbox-toolbar-button {
-  position: relative;
-  z-index: 1;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
+.sidebar-search-clear {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 0;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: 7px;
+  border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  font: inherit;
-  line-height: 1;
-  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
-.inbox-toolbar-button:hover {
-  background: var(--color-bg-hover);
+.sidebar-search-clear:hover {
+  background: var(--color-sidebar-hover);
   color: var(--color-text-primary);
 }
 
-.inbox-toolbar-button:active {
-  background: var(--color-bg-secondary);
+/* Search results header — the query lives in the sidebar, not here */
+.search-results-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 94%, var(--color-bg-secondary));
 }
 
-.inbox-toolbar-button--end {
-  margin-right: 8px;
+.app-shell--with-background .search-results-header {
+  border-bottom-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 12%, transparent);
+}
+
+.search-results-glyph {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.search-results-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.search-results-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.search-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.search-empty-action {
+  margin-top: 6px;
+  padding: 6px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 13px;
+  cursor: pointer;
 }
 
 .search-toolbar-button {
@@ -857,75 +1161,6 @@ textarea:focus-visible {
 .search-toolbar-icon-button {
   width: 34px;
   padding: 0;
-}
-
-.batch-select-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  margin-right: auto;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
-}
-
-.batch-select-control span {
-  white-space: nowrap;
-}
-
-.batch-checkbox {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
-  display: inline-grid;
-  place-content: center;
-  margin: 0;
-  border: 1px solid color-mix(in srgb, var(--color-text-secondary) 52%, transparent);
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--color-bg) 82%, var(--color-bg-secondary));
-  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 8%, transparent);
-  cursor: pointer;
-  transition: background-color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
-}
-
-.batch-checkbox::before {
-  content: "";
-  width: 7px;
-  height: 4px;
-  margin-top: -1px;
-  border-left: 2px solid #fff;
-  border-bottom: 2px solid #fff;
-  transform: rotate(-45deg) scale(0);
-  transform-origin: center;
-  transition: transform 0.12s ease;
-}
-
-.batch-checkbox:hover {
-  border-color: color-mix(in srgb, var(--color-text-secondary) 78%, transparent);
-  background: var(--color-bg-hover);
-}
-
-.batch-checkbox:checked {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 22%, transparent);
-}
-
-.batch-checkbox:checked::before {
-  transform: rotate(-45deg) scale(1);
-}
-
-.batch-checkbox:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.message-row-checkbox {
-  margin-right: 10px;
 }
 
 .search-filters-panel {
@@ -1041,14 +1276,6 @@ textarea:focus-visible {
 }
 
 @media (max-width: 720px) {
-  .search-toolbar {
-    flex-wrap: wrap;
-  }
-
-  .search-input-shell {
-    flex-basis: 100%;
-  }
-
   .search-filters-grid {
     grid-template-columns: 1fr;
   }
@@ -1622,6 +1849,19 @@ textarea:focus-visible {
 
 .participant-toggle:hover {
   text-decoration: underline;
+}
+
+/* Attachments live at the end of the message body scroll rather than docked to
+   the bottom of the pane, so they never take height away from the text: they
+   only appear once the reader scrolls past the message. */
+.message-attachments {
+  margin: 22px -16px 0;
+  padding: 14px 16px 2px;
+  border-top: 1px solid var(--color-border);
+}
+
+.app-shell--with-background .message-attachments {
+  border-top-color: color-mix(in srgb, var(--color-border) 60%, transparent);
 }
 
 .attachment-list {

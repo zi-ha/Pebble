@@ -41,10 +41,6 @@ describe("UIStore", () => {
       activeAccountId: null,
       activeFolderId: null,
       selectedMessageId: null,
-      selectedThreadId: null,
-      threadView: false,
-      selectedMessageIds: new Set(),
-      batchMode: false,
     });
   });
 
@@ -77,24 +73,14 @@ describe("UIStore", () => {
     expect(useUIStore.getState().activeView).toBe("settings");
   });
 
-  it("opens a message in inbox by clearing stale thread selection", () => {
+  it("opens a message in inbox from another view", () => {
     useUIStore.setState({ activeView: "snoozed" });
-    useMailStore.setState({
-      selectedMessageId: null,
-      selectedThreadId: "thread-1",
-      threadView: true,
-      selectedMessageIds: new Set(["message-1"]),
-      batchMode: true,
-    });
+    useMailStore.setState({ selectedMessageId: null });
 
     useUIStore.getState().openMessageInInbox("message-2");
 
     expect(useUIStore.getState().activeView).toBe("inbox");
     expect(useMailStore.getState().selectedMessageId).toBe("message-2");
-    expect(useMailStore.getState().selectedThreadId).toBe(null);
-    expect(useMailStore.getState().threadView).toBe(false);
-    expect(useMailStore.getState().selectedMessageIds.size).toBe(0);
-    expect(useMailStore.getState().batchMode).toBe(false);
   });
 
   it("stores context navigation state for selected-text actions", () => {

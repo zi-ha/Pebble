@@ -10,12 +10,12 @@ import {
   Folder,
   LayoutGrid,
   Settings,
-  Search,
   Clock,
   Star,
   ContactRound,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import SidebarSearch from "./SidebarSearch";
 import { useUIStore } from "../stores/ui.store";
 import { isComposeDirty, useComposeStore } from "../stores/compose.store";
 import { useConfirmStore } from "../stores/confirm.store";
@@ -167,6 +167,66 @@ export default function SidebarClassic() {
     justifyContent: sidebarCollapsed ? "center" : "flex-start",
   };
 
+  const starredButton = (
+    <SidebarButton
+      key="__starred__"
+      icon={<Star size={16} />}
+      label={t("sidebar.starred", "Starred")}
+      isActive={activeView === "starred"}
+      collapsed={sidebarCollapsed}
+      style={buttonBase}
+      onClick={() => safeSetActiveView("starred")}
+    />
+  );
+
+  // Starred is a virtual view, so it must not depend on a synced drafts folder:
+  // accounts without drafts used to lose the entry altogether.
+  function renderFolderNav(): React.ReactNode[] {
+    if (!hasRealFolders) {
+      const nodes = DEFAULT_FOLDERS.map((df, index) => (
+        <SidebarButton
+          key={df.role}
+          icon={ROLE_ICONS[df.role] || <Folder size={16} />}
+          label={t(df.labelKey)}
+          isActive={index === 0 && activeView === "inbox"}
+          collapsed={sidebarCollapsed}
+          style={buttonBase}
+          onClick={() => safeSetActiveView("inbox")}
+        />
+      ));
+      const archiveIndex = DEFAULT_FOLDERS.findIndex((df) => df.role === "archive");
+      nodes.splice(archiveIndex >= 0 ? archiveIndex + 1 : nodes.length, 0, starredButton);
+      return nodes;
+    }
+
+    const nodes: React.ReactNode[] = [];
+    let starredPlaced = false;
+    for (const folder of dedupedFolders) {
+      if (!starredPlaced && folder.role === "drafts") {
+        nodes.push(starredButton);
+        starredPlaced = true;
+      }
+      nodes.push(
+        <SidebarButton
+          key={folder.id}
+          icon={folderIcon(folder.role)}
+          label={folderLabel(folder)}
+          badge={showUnread ? unreadCountForFolder(folder.id, folders, unreadCounts) : undefined}
+          isActive={folder.id === activeFolderId && activeView === "inbox"}
+          collapsed={sidebarCollapsed}
+          style={buttonBase}
+          onClick={() => handleFolderClick(folder.id)}
+        />
+      );
+    }
+
+    if (!starredPlaced) {
+      // No drafts folder: keep Starred right below the system folders.
+      nodes.splice(dedupedFolders.filter((folder) => folder.role).length, 0, starredButton);
+    }
+    return nodes;
+  }
+
   return (
     <aside
       aria-label={t("sidebar.navigation", "Sidebar")}
@@ -182,17 +242,8 @@ export default function SidebarClassic() {
         overflow: "hidden",
       }}
     >
-      {/* Search button */}
-      <nav aria-label={t("sidebar.search", "Search")} style={{ padding: "8px 6px 0", display: "flex", flexDirection: "column", gap: "1px" }}>
-        <SidebarButton
-          icon={<Search size={16} />}
-          label={t("search.title", "Search")}
-          isActive={activeView === "search"}
-          collapsed={sidebarCollapsed}
-          style={buttonBase}
-          onClick={() => safeSetActiveView("search")}
-        />
-      </nav>
+      {/* Search box (single search entry for the whole app) */}
+      <SidebarSearch collapsed={sidebarCollapsed} />
 
       {/* Section label */}
       {!sidebarCollapsed && (
@@ -254,65 +305,7 @@ export default function SidebarClassic() {
           gap: "1px",
         }}
       >
-        {hasRealFolders
-          ? dedupedFolders.flatMap((folder) => {
-              const items: React.ReactNode[] = [];
-              if (folder.role === "drafts") {
-                items.push(
-                  <SidebarButton
-                    key="__starred__"
-                    icon={<Star size={16} />}
-                    label={t("sidebar.starred", "Starred")}
-                    isActive={activeView === "starred"}
-                    collapsed={sidebarCollapsed}
-                    style={buttonBase}
-                    onClick={() => safeSetActiveView("starred")}
-                  />
-                );
-              }
-              const isActive = folder.id === activeFolderId && activeView === "inbox";
-              items.push(
-                <SidebarButton
-                  key={folder.id}
-                  icon={folderIcon(folder.role)}
-                  label={folderLabel(folder)}
-                  badge={showUnread ? unreadCountForFolder(folder.id, folders, unreadCounts) : undefined}
-                  isActive={isActive}
-                  collapsed={sidebarCollapsed}
-                  style={buttonBase}
-                  onClick={() => handleFolderClick(folder.id)}
-                />
-              );
-              return items;
-            })
-          : DEFAULT_FOLDERS.flatMap((df, index) => {
-              const items: React.ReactNode[] = [];
-              if (df.role === "drafts") {
-                items.push(
-                  <SidebarButton
-                    key="__starred__"
-                    icon={<Star size={16} />}
-                    label={t("sidebar.starred", "Starred")}
-                    isActive={activeView === "starred"}
-                    collapsed={sidebarCollapsed}
-                    style={buttonBase}
-                    onClick={() => safeSetActiveView("starred")}
-                  />
-                );
-              }
-              items.push(
-                <SidebarButton
-                  key={df.role}
-                  icon={ROLE_ICONS[df.role] || <Folder size={16} />}
-                  label={t(df.labelKey)}
-                  isActive={index === 0 && activeView === "inbox"}
-                  collapsed={sidebarCollapsed}
-                  style={buttonBase}
-                  onClick={() => safeSetActiveView("inbox")}
-                />
-              );
-              return items;
-            })}
+        {renderFolderNav()}
       </nav>
 
       {/* Divider */}

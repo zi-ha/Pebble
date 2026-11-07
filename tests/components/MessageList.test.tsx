@@ -10,12 +10,6 @@ const mocks = vi.hoisted(() => ({
     invalidateQueries: vi.fn(),
   },
   getMessageLabelsBatch: vi.fn(),
-  batchArchive: vi.fn(),
-  batchDelete: vi.fn(),
-  batchMarkRead: vi.fn(),
-  batchStar: vi.fn(),
-  addToast: vi.fn(),
-  confirm: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -55,20 +49,6 @@ vi.mock("../../src/hooks/queries", () => ({
 
 vi.mock("../../src/lib/api", () => ({
   getMessageLabelsBatch: mocks.getMessageLabelsBatch,
-  batchArchive: mocks.batchArchive,
-  batchDelete: mocks.batchDelete,
-  batchMarkRead: mocks.batchMarkRead,
-  batchStar: mocks.batchStar,
-}));
-
-vi.mock("../../src/stores/toast.store", () => ({
-  useToastStore: (selector: (state: { addToast: (toast: unknown) => void }) => unknown) =>
-    selector({ addToast: mocks.addToast }),
-}));
-
-vi.mock("../../src/stores/confirm.store", () => ({
-  useConfirmStore: (selector: (state: { confirm: () => Promise<boolean> }) => unknown) =>
-    selector({ confirm: mocks.confirm }),
 }));
 
 vi.mock("../../src/components/MessageItem", () => ({
@@ -153,11 +133,6 @@ describe("MessageList", () => {
         color: null,
       },
     ];
-    mocks.batchArchive.mockResolvedValue(1);
-    mocks.batchDelete.mockResolvedValue(1);
-    mocks.batchMarkRead.mockResolvedValue(1);
-    mocks.batchStar.mockResolvedValue(1);
-    mocks.confirm.mockResolvedValue(true);
     mocks.folders = [{
       id: "folder-archive",
       account_id: "account-1",
@@ -174,11 +149,29 @@ describe("MessageList", () => {
       activeAccountId: "account-1",
       activeFolderId: "folder-archive",
       selectedMessageId: null,
-      selectedThreadId: null,
-      threadView: false,
-      selectedMessageIds: new Set(),
-      batchMode: false,
     });
+  });
+
+  it("groups the list into day sections", () => {
+    const now = new Date();
+    const today = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9).getTime() / 1000);
+
+    render(
+      <MessageList
+        messages={[
+          { ...makeMessage("m-today"), date: today },
+          { ...makeMessage("m-yesterday"), date: today - 86_400 },
+          { ...makeMessage("m-older"), date: today - 40 * 86_400 },
+        ]}
+        selectedMessageId={null}
+        onSelectMessage={vi.fn()}
+        loading={false}
+      />,
+    );
+
+    expect(screen.getByText("Today")).toBeTruthy();
+    expect(screen.getByText("Yesterday")).toBeTruthy();
+    expect(screen.getByText("Earlier")).toBeTruthy();
   });
 
   it("does not show Load more just because the current page has 50 messages", () => {
@@ -323,93 +316,5 @@ describe("MessageList", () => {
     expect(firstColor).toMatch(/^#[0-9a-f]{6}$/);
     expect(secondColor).toMatch(/^#[0-9a-f]{6}$/);
     expect(firstColor).not.toBe(secondColor);
-  });
-
-  it("refreshes derived queries after a successful batch star action", async () => {
-    mocks.batchStar.mockResolvedValueOnce(2);
-    useMailStore.setState({
-      selectedMessageIds: new Set(["m-1", "m-2"]),
-      batchMode: true,
-    });
-
-    render(
-      <MessageList
-        messages={[makeMessage("m-1"), makeMessage("m-2")]}
-        selectedMessageId={null}
-        onSelectMessage={vi.fn()}
-        loading={false}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Star" }));
-
-    await waitFor(() => expect(mocks.batchStar).toHaveBeenCalledWith(["m-1", "m-2"], true));
-    expect(mocks.queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["messages"] });
-    expect(mocks.queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["threads"] });
-    expect(mocks.queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["starred-messages"] });
-    expect(mocks.queryClient.invalidateQueries).not.toHaveBeenCalledWith({ queryKey: ["folder-unread-counts"] });
-  });
-
-  it("refreshes folder unread counts after a successful batch archive action", async () => {
-    mocks.batchArchive.mockResolvedValueOnce(2);
-    useMailStore.setState({
-      selectedMessageIds: new Set(["m-1", "m-2"]),
-      batchMode: true,
-    });
-
-    render(
-      <MessageList
-        messages={[makeMessage("m-1"), makeMessage("m-2")]}
-        selectedMessageId={null}
-        onSelectMessage={vi.fn()}
-        loading={false}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "messageActions.archive" }));
-
-    await waitFor(() => expect(mocks.batchArchive).toHaveBeenCalledWith(["m-1", "m-2"]));
-    expect(mocks.queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["folder-unread-counts"] });
-  });
-
-  it("refreshes folder unread counts after a successful batch read-state action", async () => {
-    mocks.batchMarkRead.mockResolvedValueOnce(2);
-    useMailStore.setState({
-      selectedMessageIds: new Set(["m-1", "m-2"]),
-      batchMode: true,
-    });
-
-    render(
-      <MessageList
-        messages={[makeMessage("m-1"), makeMessage("m-2")]}
-        selectedMessageId={null}
-        onSelectMessage={vi.fn()}
-        loading={false}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "batch.markRead" }));
-
-    await waitFor(() => expect(mocks.batchMarkRead).toHaveBeenCalledWith(["m-1", "m-2"], true));
-    expect(mocks.queryClient.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["folder-unread-counts"] });
-  });
-
-  it("uses the custom checkbox control for select all", () => {
-    useMailStore.setState({ batchMode: true });
-
-    render(
-      <MessageList
-        messages={[makeMessage("m-1"), makeMessage("m-2")]}
-        selectedMessageId={null}
-        onSelectMessage={vi.fn()}
-        loading={false}
-      />,
-    );
-
-    const checkbox = screen.getByRole("checkbox", { name: "Select all" });
-
-    expect(checkbox.className).toContain("batch-checkbox");
-    expect(checkbox.className).toContain("batch-select-all-checkbox");
-    expect(checkbox.closest("label")?.className).toContain("batch-select-control");
   });
 });

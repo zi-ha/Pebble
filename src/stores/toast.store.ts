@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSingleton } from "./singleton";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -18,7 +19,8 @@ interface ToastState {
 
 let nextId = 0;
 
-export const useToastStore = create<ToastState>((set) => ({
+export const useToastStore = createSingleton("toast", () =>
+  create<ToastState>((set) => ({
   toasts: [],
 
   addToast: (toast) => {
@@ -33,4 +35,5 @@ export const useToastStore = create<ToastState>((set) => ({
   removeToast: (id) => {
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
   },
-}));
+  })),
+);

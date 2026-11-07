@@ -161,7 +161,7 @@ export default function MessageActionToolbar({
 
   return (
     <>
-      <div style={{ display: "flex", gap: "2px", padding: "4px 16px 4px 48px", position: "relative" }}>
+      <div className="message-action-toolbar">
         {actions.map(({ icon: Icon, label, action, active, disabled }, i) => (
           <button
             key={i}
@@ -172,7 +172,7 @@ export default function MessageActionToolbar({
               background: "none",
               border: "none",
               cursor: disabled ? "default" : "pointer",
-              padding: "6px 8px",
+              padding: "5px 7px",
               borderRadius: "4px",
               color: active ? "var(--color-accent)" : "var(--color-text-secondary)",
               display: "flex",
@@ -196,7 +196,7 @@ export default function MessageActionToolbar({
               background: "none",
               border: "none",
               cursor: "pointer",
-              padding: "6px 8px",
+              padding: "5px 7px",
               borderRadius: "4px",
               color: inKanban ? "var(--color-accent)" : "var(--color-text-secondary)",
               display: "flex",

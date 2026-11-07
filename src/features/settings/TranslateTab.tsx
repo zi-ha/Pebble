@@ -8,13 +8,31 @@ import {
 import { useToastStore } from "@/stores/toast.store";
 import { extractErrorMessage } from "../../lib/extractErrorMessage";
 
-type ProviderType = "deeplx" | "deepl" | "generic_api" | "llm";
+type ProviderType =
+  | "microsoft"
+  | "deeplx"
+  | "deepl"
+  | "generic_api"
+  | "llm"
+  | "baidu"
+  | "tencent"
+  | "aliyun"
+  | "volcengine"
+  | "huawei"
+  | "caiyun";
 
-const PROVIDER_OPTIONS: { value: ProviderType; label: string }[] = [
-  { value: "deeplx", label: "DeepLX" },
-  { value: "deepl", label: "DeepL" },
-  { value: "generic_api", label: "Generic API" },
-  { value: "llm", label: "LLM" },
+const PROVIDER_OPTIONS: { value: ProviderType; labelKey: string; fallback: string }[] = [
+  { value: "microsoft", labelKey: "translate.providerMicrosoft", fallback: "Microsoft (built in)" },
+  { value: "deeplx", labelKey: "translate.providerDeeplx", fallback: "DeepLX" },
+  { value: "deepl", labelKey: "translate.providerDeepl", fallback: "DeepL" },
+  { value: "baidu", labelKey: "translate.providerBaidu", fallback: "Baidu Translate" },
+  { value: "tencent", labelKey: "translate.providerTencent", fallback: "Tencent Cloud TMT" },
+  { value: "aliyun", labelKey: "translate.providerAliyun", fallback: "Alibaba Cloud MT" },
+  { value: "volcengine", labelKey: "translate.providerVolcengine", fallback: "Volcengine Translate" },
+  { value: "huawei", labelKey: "translate.providerHuawei", fallback: "Huawei Cloud NLP" },
+  { value: "caiyun", labelKey: "translate.providerCaiyun", fallback: "Caiyun Xiaoyi" },
+  { value: "generic_api", labelKey: "translate.providerGeneric", fallback: "Generic API" },
+  { value: "llm", labelKey: "translate.providerLlm", fallback: "LLM" },
 ];
 
 const labelStyle: React.CSSProperties = {
@@ -49,10 +67,64 @@ const buttonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
+const hintStyle: React.CSSProperties = {
+  ...fieldGroupStyle,
+  padding: "10px 12px",
+  borderRadius: "6px",
+  background: "var(--color-bg-hover)",
+  fontSize: "12.5px",
+  lineHeight: 1.55,
+  color: "var(--color-text-secondary)",
+};
+
+/** One credential input — every cloud vendor needs at least two of these. */
+function CredentialField({
+  id,
+  name,
+  label,
+  value,
+  onChange,
+  secret = false,
+  placeholder,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  secret?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div style={fieldGroupStyle}>
+      <label htmlFor={id} style={labelStyle}>
+        {label}
+      </label>
+      <input
+        id={id}
+        name={name}
+        style={inputStyle}
+        type={secret ? "password" : "text"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete={secret ? "current-password" : "off"}
+      />
+    </div>
+  );
+}
+
 export default function TranslateTab() {
   const { t } = useTranslation();
-  const [providerType, setProviderType] = useState<ProviderType>("deeplx");
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [providerType, setProviderType] = useState<ProviderType>("microsoft");
+  // The built-in engine is available out of the box, so a fresh install starts
+  // enabled; a saved config still overrides this on load.
+  const [isEnabled, setIsEnabled] = useState(true);
+
+  // Microsoft Translator fields. Both are optional: without a key the built-in
+  // (keyless) Microsoft endpoint is used, with a key the Azure endpoint is used.
+  const [microsoftApiKey, setMicrosoftApiKey] = useState("");
+  const [microsoftRegion, setMicrosoftRegion] = useState("");
 
   // DeepLX fields
   const [deeplxEndpoint, setDeeplxEndpoint] = useState("");
@@ -75,6 +147,34 @@ export default function TranslateTab() {
   const [llmModel, setLlmModel] = useState("");
   const [llmMode, setLlmMode] = useState<"completions" | "responses">("completions");
 
+  // Baidu Translate fields
+  const [baiduAppId, setBaiduAppId] = useState("");
+  const [baiduSecretKey, setBaiduSecretKey] = useState("");
+
+  // Tencent Cloud TMT fields
+  const [tencentSecretId, setTencentSecretId] = useState("");
+  const [tencentSecretKey, setTencentSecretKey] = useState("");
+  const [tencentRegion, setTencentRegion] = useState("ap-guangzhou");
+
+  // Alibaba Cloud Machine Translation fields
+  const [aliyunAccessKeyId, setAliyunAccessKeyId] = useState("");
+  const [aliyunAccessKeySecret, setAliyunAccessKeySecret] = useState("");
+  const [aliyunRegion, setAliyunRegion] = useState("cn-hangzhou");
+
+  // Volcengine Machine Translation fields
+  const [volcAccessKey, setVolcAccessKey] = useState("");
+  const [volcSecretKey, setVolcSecretKey] = useState("");
+  const [volcRegion, setVolcRegion] = useState("cn-north-1");
+
+  // Huawei Cloud NLP text translation fields
+  const [huaweiAccessKey, setHuaweiAccessKey] = useState("");
+  const [huaweiSecretKey, setHuaweiSecretKey] = useState("");
+  const [huaweiProjectId, setHuaweiProjectId] = useState("");
+  const [huaweiRegion, setHuaweiRegion] = useState("cn-north-4");
+
+  // Caiyun Xiaoyi fields
+  const [caiyunToken, setCaiyunToken] = useState("");
+
   const [statusMsg, setStatusMsg] = useState("");
   const [statusType, setStatusType] = useState<"success" | "error" | "">("");
   const [saving, setSaving] = useState(false);
@@ -94,6 +194,10 @@ export default function TranslateTab() {
 
       const parsed = JSON.parse(cfg.config);
       switch (parsed.type) {
+        case "microsoft":
+          setMicrosoftApiKey(parsed.api_key || "");
+          setMicrosoftRegion(parsed.region || "");
+          break;
         case "deeplx":
           setDeeplxEndpoint(parsed.endpoint || "");
           break;
@@ -115,6 +219,34 @@ export default function TranslateTab() {
           setLlmModel(parsed.model || "");
           setLlmMode(parsed.mode || "completions");
           break;
+        case "baidu":
+          setBaiduAppId(parsed.app_id || "");
+          setBaiduSecretKey(parsed.secret_key || "");
+          break;
+        case "tencent":
+          setTencentSecretId(parsed.secret_id || "");
+          setTencentSecretKey(parsed.secret_key || "");
+          setTencentRegion(parsed.region || "ap-guangzhou");
+          break;
+        case "aliyun":
+          setAliyunAccessKeyId(parsed.access_key_id || "");
+          setAliyunAccessKeySecret(parsed.access_key_secret || "");
+          setAliyunRegion(parsed.region || "cn-hangzhou");
+          break;
+        case "volcengine":
+          setVolcAccessKey(parsed.access_key || "");
+          setVolcSecretKey(parsed.secret_key || "");
+          setVolcRegion(parsed.region || "cn-north-1");
+          break;
+        case "huawei":
+          setHuaweiAccessKey(parsed.access_key || "");
+          setHuaweiSecretKey(parsed.secret_key || "");
+          setHuaweiProjectId(parsed.project_id || "");
+          setHuaweiRegion(parsed.region || "cn-north-4");
+          break;
+        case "caiyun":
+          setCaiyunToken(parsed.token || "");
+          break;
       }
     } catch (err) {
       console.error("Failed to load translate config:", err);
@@ -123,6 +255,13 @@ export default function TranslateTab() {
 
   function buildConfigJson(): string {
     switch (providerType) {
+      case "microsoft":
+        return JSON.stringify({
+          type: "microsoft",
+          api_key: microsoftApiKey.trim() || null,
+          region: microsoftRegion.trim() || null,
+          endpoint: null,
+        });
       case "deeplx":
         return JSON.stringify({ type: "deeplx", endpoint: deeplxEndpoint });
       case "deepl":
@@ -145,6 +284,53 @@ export default function TranslateTab() {
           api_key: llmApiKey,
           model: llmModel,
           mode: llmMode,
+        });
+      case "baidu":
+        return JSON.stringify({
+          type: "baidu",
+          app_id: baiduAppId.trim(),
+          secret_key: baiduSecretKey.trim(),
+          endpoint: null,
+        });
+      case "tencent":
+        return JSON.stringify({
+          type: "tencent",
+          secret_id: tencentSecretId.trim(),
+          secret_key: tencentSecretKey.trim(),
+          region: tencentRegion.trim() || null,
+          project_id: 0,
+          endpoint: null,
+        });
+      case "aliyun":
+        return JSON.stringify({
+          type: "aliyun",
+          access_key_id: aliyunAccessKeyId.trim(),
+          access_key_secret: aliyunAccessKeySecret.trim(),
+          region: aliyunRegion.trim() || null,
+          endpoint: null,
+        });
+      case "volcengine":
+        return JSON.stringify({
+          type: "volcengine",
+          access_key: volcAccessKey.trim(),
+          secret_key: volcSecretKey.trim(),
+          region: volcRegion.trim() || null,
+          endpoint: null,
+        });
+      case "huawei":
+        return JSON.stringify({
+          type: "huawei",
+          access_key: huaweiAccessKey.trim(),
+          secret_key: huaweiSecretKey.trim(),
+          project_id: huaweiProjectId.trim(),
+          region: huaweiRegion.trim() || null,
+          endpoint: null,
+        });
+      case "caiyun":
+        return JSON.stringify({
+          type: "caiyun",
+          token: caiyunToken.trim(),
+          endpoint: null,
         });
     }
   }
@@ -193,6 +379,59 @@ export default function TranslateTab() {
 
   function renderProviderFields() {
     switch (providerType) {
+      case "microsoft":
+        return (
+          <>
+            <div
+              style={{
+                ...fieldGroupStyle,
+                padding: "10px 12px",
+                borderRadius: "6px",
+                background: "var(--color-bg-hover)",
+                fontSize: "12.5px",
+                lineHeight: 1.55,
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              {t(
+                "translate.microsoftBuiltinHint",
+                "Built in and free: no account or API key needed. Leave the key empty to use Microsoft's public endpoint. Fill in a key only if you want to use your own Azure Translator subscription.",
+              )}
+            </div>
+            <div style={fieldGroupStyle}>
+              <label htmlFor="translate-microsoft-api-key" style={labelStyle}>
+                {t("translate.apiKeyOptional")}
+              </label>
+              <input
+                id="translate-microsoft-api-key"
+                name="microsoft_api_key"
+                style={inputStyle}
+                type="password"
+                value={microsoftApiKey}
+                onChange={(e) => setMicrosoftApiKey(e.target.value)}
+                placeholder={t("translate.microsoftKeyPlaceholder", "Leave empty to use the built-in free endpoint")}
+                autoComplete="current-password"
+              />
+            </div>
+            {microsoftApiKey.trim() !== "" && (
+              <div style={fieldGroupStyle}>
+                <label htmlFor="translate-microsoft-region" style={labelStyle}>
+                  {t("translate.azureRegion", "Azure region (required for Azure keys)")}
+                </label>
+                <input
+                  id="translate-microsoft-region"
+                  name="microsoft_region"
+                  style={inputStyle}
+                  value={microsoftRegion}
+                  onChange={(e) => setMicrosoftRegion(e.target.value)}
+                  placeholder="eastasia"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+          </>
+        );
+
       case "deeplx":
         return (
           <div style={fieldGroupStyle}>
@@ -237,6 +476,206 @@ export default function TranslateTab() {
                 {t("translate.useFreeApi")}
               </label>
             </div>
+          </>
+        );
+
+      case "baidu":
+        return (
+          <>
+            <div style={hintStyle}>
+              {t(
+                "translate.cloudCredentialHint",
+                "Create a key pair in the vendor's machine-translation console, then paste it here. Credentials are stored encrypted on this device.",
+              )}
+            </div>
+            <CredentialField
+              id="translate-baidu-app-id"
+              name="baidu_app_id"
+              label={t("translate.baiduAppId", "AppID")}
+              value={baiduAppId}
+              onChange={setBaiduAppId}
+              placeholder="20240101000000001"
+            />
+            <CredentialField
+              id="translate-baidu-secret-key"
+              name="baidu_secret_key"
+              label={t("translate.baiduSecretKey", "Secret Key")}
+              value={baiduSecretKey}
+              onChange={setBaiduSecretKey}
+              secret
+            />
+          </>
+        );
+
+      case "tencent":
+        return (
+          <>
+            <div style={hintStyle}>
+              {t(
+                "translate.cloudCredentialHint",
+                "Create a key pair in the vendor's machine-translation console, then paste it here. Credentials are stored encrypted on this device.",
+              )}
+            </div>
+            <CredentialField
+              id="translate-tencent-secret-id"
+              name="tencent_secret_id"
+              label={t("translate.tencentSecretId", "SecretId")}
+              value={tencentSecretId}
+              onChange={setTencentSecretId}
+              placeholder="AKID..."
+            />
+            <CredentialField
+              id="translate-tencent-secret-key"
+              name="tencent_secret_key"
+              label={t("translate.tencentSecretKey", "SecretKey")}
+              value={tencentSecretKey}
+              onChange={setTencentSecretKey}
+              secret
+            />
+            <CredentialField
+              id="translate-tencent-region"
+              name="tencent_region"
+              label={t("translate.tencentRegion", "Region")}
+              value={tencentRegion}
+              onChange={setTencentRegion}
+              placeholder="ap-guangzhou"
+            />
+          </>
+        );
+
+      case "aliyun":
+        return (
+          <>
+            <div style={hintStyle}>
+              {t(
+                "translate.cloudCredentialHint",
+                "Create a key pair in the vendor's machine-translation console, then paste it here. Credentials are stored encrypted on this device.",
+              )}
+            </div>
+            <CredentialField
+              id="translate-aliyun-access-key-id"
+              name="aliyun_access_key_id"
+              label={t("translate.aliyunAccessKeyId", "AccessKey ID")}
+              value={aliyunAccessKeyId}
+              onChange={setAliyunAccessKeyId}
+              placeholder="LTAI..."
+            />
+            <CredentialField
+              id="translate-aliyun-access-key-secret"
+              name="aliyun_access_key_secret"
+              label={t("translate.aliyunAccessKeySecret", "AccessKey Secret")}
+              value={aliyunAccessKeySecret}
+              onChange={setAliyunAccessKeySecret}
+              secret
+            />
+            <CredentialField
+              id="translate-aliyun-region"
+              name="aliyun_region"
+              label={t("translate.aliyunRegion", "RegionId")}
+              value={aliyunRegion}
+              onChange={setAliyunRegion}
+              placeholder="cn-hangzhou"
+            />
+          </>
+        );
+
+      case "volcengine":
+        return (
+          <>
+            <div style={hintStyle}>
+              {t(
+                "translate.cloudCredentialHint",
+                "Create a key pair in the vendor's machine-translation console, then paste it here. Credentials are stored encrypted on this device.",
+              )}
+            </div>
+            <CredentialField
+              id="translate-volc-access-key"
+              name="volc_access_key"
+              label={t("translate.volcAccessKey", "Access Key (AK)")}
+              value={volcAccessKey}
+              onChange={setVolcAccessKey}
+              placeholder="AKLT..."
+            />
+            <CredentialField
+              id="translate-volc-secret-key"
+              name="volc_secret_key"
+              label={t("translate.volcSecretKey", "Secret Key (SK)")}
+              value={volcSecretKey}
+              onChange={setVolcSecretKey}
+              secret
+            />
+            <CredentialField
+              id="translate-volc-region"
+              name="volc_region"
+              label={t("translate.volcRegion", "Region")}
+              value={volcRegion}
+              onChange={setVolcRegion}
+              placeholder="cn-north-1"
+            />
+          </>
+        );
+
+      case "huawei":
+        return (
+          <>
+            <div style={hintStyle}>
+              {t(
+                "translate.huaweiHint",
+                "开通「自然语言处理 NLP · 文本翻译」后，在「我的凭证」里拿到 AK/SK 和项目 ID（Project ID）填在下面。AK/SK 用于签名，项目 ID 是请求路径的一部分。",
+              )}
+            </div>
+            <CredentialField
+              id="translate-huawei-access-key"
+              name="huawei_access_key"
+              label={t("translate.huaweiAccessKey", "Access Key (AK)")}
+              value={huaweiAccessKey}
+              onChange={setHuaweiAccessKey}
+              placeholder="QTWA..."
+            />
+            <CredentialField
+              id="translate-huawei-secret-key"
+              name="huawei_secret_key"
+              label={t("translate.huaweiSecretKey", "Secret Key (SK)")}
+              value={huaweiSecretKey}
+              onChange={setHuaweiSecretKey}
+              secret
+            />
+            <CredentialField
+              id="translate-huawei-project-id"
+              name="huawei_project_id"
+              label={t("translate.huaweiProjectId", "Project ID")}
+              value={huaweiProjectId}
+              onChange={setHuaweiProjectId}
+              placeholder="77b6a44cba5143ab91d13ab9a8ff44fd"
+            />
+            <CredentialField
+              id="translate-huawei-region"
+              name="huawei_region"
+              label={t("translate.huaweiRegion", "Region")}
+              value={huaweiRegion}
+              onChange={setHuaweiRegion}
+              placeholder="cn-north-4"
+            />
+          </>
+        );
+
+      case "caiyun":
+        return (
+          <>
+            <div style={hintStyle}>
+              {t(
+                "translate.caiyunHint",
+                "在彩云小译开放平台申请访问令牌（Token）填在下面即可。该接口只支持中文、英文、日文之间互译。",
+              )}
+            </div>
+            <CredentialField
+              id="translate-caiyun-token"
+              name="caiyun_token"
+              label={t("translate.caiyunToken", "Access Token")}
+              value={caiyunToken}
+              onChange={setCaiyunToken}
+              secret
+            />
           </>
         );
 
@@ -406,7 +845,7 @@ export default function TranslateTab() {
         >
           {PROVIDER_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.labelKey, opt.fallback)}
             </option>
           ))}
         </select>

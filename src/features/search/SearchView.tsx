@@ -1,16 +1,18 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTranslation } from "react-i18next";
-import { Search, SlidersHorizontal, Loader } from "lucide-react";
+import { Search, SlidersHorizontal, Loader, X } from "lucide-react";
 import type { AdvancedSearchQuery, SearchHit } from "@/lib/api";
 import { advancedSearch, searchMessages } from "@/lib/api";
 import { useUIStore } from "@/stores/ui.store";
 import SearchFilters from "./SearchFilters";
 import SearchResultItem from "./SearchResultItem";
 import MessageDetail from "@/components/MessageDetail";
+import MessageDetailEmpty from "@/components/MessageDetailEmpty";
 
 const emptyFilters: AdvancedSearchQuery = {};
+const SEARCH_DEBOUNCE_MS = 250;
 
 function hasActiveFilters(filters: AdvancedSearchQuery): boolean {
   return !!(
@@ -26,29 +28,38 @@ function hasActiveFilters(filters: AdvancedSearchQuery): boolean {
 
 export default function SearchView() {
   const { t } = useTranslation();
-  const [query, setQuery] = useState("");
+  // The sidebar search box owns the query; this view only renders its results.
+  const query = useUIStore((s) => s.searchQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(() => query.trim());
   const [filters, setFilters] = useState<AdvancedSearchQuery>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const storeSearchQuery = useUIStore((s) => s.searchQuery);
 
   const trimmed = query.trim();
   const filtersActive = hasActiveFilters(filters);
-  const searchEnabled = hasSearched && (trimmed.length > 0 || filtersActive);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(trimmed), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [trimmed]);
+
+  const searchEnabled = debouncedQuery.length > 0 || filtersActive;
 
   const { data: results = [], isLoading: loading, error: queryError, refetch } = useQuery({
-    queryKey: ["search", trimmed, filters],
-    queryFn: () => {
-      if (filtersActive) {
-        return advancedSearch({ ...filters, text: trimmed || undefined });
-      }
-      return searchMessages(trimmed);
-    },
+    queryKey: ["search", debouncedQuery, filters],
+    queryFn: () =>
+      filtersActive
+        ? advancedSearch({ ...filters, text: debouncedQuery || undefined })
+        : searchMessages(debouncedQuery),
     enabled: searchEnabled,
     staleTime: 60_000,
     placeholderData: (prev: SearchHit[] | undefined) => prev,
   });
+
+  // A new term invalidates the open result.
+  useEffect(() => {
+    setSelectedId(null);
+  }, [debouncedQuery]);
 
   const resultsParentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -59,201 +70,91 @@ export default function SearchView() {
     overscan: 5,
   });
 
-  const doSearch = useCallback(() => {
-    const t = query.trim();
-    if (!t && !hasActiveFilters(filters)) {
-      setHasSearched(false);
-      setSelectedId(null);
-      return;
-    }
-    setHasSearched(true);
-    setSelectedId(null);
-  }, [query, filters]);
-
-  // Pick up context queries from other views and from this view while mounted.
-  useEffect(() => {
-    if (!storeSearchQuery) return;
-    setQuery(storeSearchQuery);
-    setSelectedId(null);
-    setHasSearched(true);
+  const clearSearchInput = useCallback(() => {
     useUIStore.getState().setSearchQuery("");
-  }, [storeSearchQuery]);
+  }, []);
 
-  // Auto-search when filters change
-  useEffect(() => {
-    if (hasActiveFilters(filters) || query.trim()) {
-      doSearch();
-    }
-  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Debounced type-ahead search (300ms after last keystroke)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const trimmed = query.trim();
-    if (!trimmed && !hasActiveFilters(filters)) return;
-    debounceRef.current = setTimeout(() => {
-      doSearch();
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    doSearch();
-  }
-
-  function handleClearFilters() {
-    setFilters(emptyFilters);
-  }
+  const resultCountLabel = useMemo(() => {
+    if (!searchEnabled) return null;
+    return t("search.resultCount", { total: results.length, defaultValue: "{{total}} results" });
+  }, [searchEnabled, results.length, t]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-      <form onSubmit={handleSubmit} className="search-toolbar">
-        <div className="search-input-shell">
-          <Search size={16} aria-hidden="true" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("inbox.searchPlaceholder")}
-            aria-label={t("search.title", "Search")}
-            autoFocus
-            className="search-input"
-          />
-        </div>
-        <button
-          type="submit"
-          className="search-toolbar-button search-toolbar-button--primary"
-        >
-          <Search size={14} aria-hidden="true" />
-          {t("search.searchButton")}
-        </button>
+      <div className="search-results-header">
+        <Search size={15} aria-hidden="true" className="search-results-glyph" />
+        <span className="search-results-title">
+          {debouncedQuery
+            ? t("search.resultsFor", { query: debouncedQuery, defaultValue: "Results for \"{{query}}\"" })
+            : t("search.title", "Search")}
+        </span>
+        {!loading && resultCountLabel && (
+          <span className="search-results-count">{resultCountLabel}</span>
+        )}
+        {debouncedQuery && (
+          <button
+            type="button"
+            onClick={clearSearchInput}
+            className="search-toolbar-button search-toolbar-icon-button"
+            aria-label={t("search.clear", "Clear search")}
+            title={t("search.clear", "Clear search")}
+          >
+            <X size={15} />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowFilters(!showFilters)}
-          title={t("search.filters")}
-          aria-label={t("search.filters")}
+          title={t("search.filters", "Filters")}
+          aria-label={t("search.filters", "Filters")}
           className={`search-toolbar-button search-toolbar-icon-button ${
-            showFilters || hasActiveFilters(filters) ? "is-active" : ""
+            showFilters || filtersActive ? "is-active" : ""
           }`}
         >
           <SlidersHorizontal size={16} />
         </button>
-      </form>
+      </div>
 
-      {/* Filters panel */}
       {showFilters && (
         <SearchFilters
           filters={filters}
           onChange={setFilters}
-          onClear={handleClearFilters}
+          onClear={() => setFilters(emptyFilters)}
         />
       )}
 
-      {/* Results + Detail split layout */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Results list */}
-        <div
-          ref={resultsParentRef}
-          className="scroll-region search-results-scroll"
-          style={{
-            width: selectedId ? "clamp(260px, 32%, 360px)" : "100%",
-            flexShrink: 0,
-            overflow: "auto",
-            borderRight: selectedId ? "1px solid var(--color-border)" : "none",
-            transition: "width 0.15s ease",
-          }}
-        >
+      <div className="mail-panes">
+        <div ref={resultsParentRef} className="scroll-region search-results-scroll mail-list-pane mail-list-pane--scroll">
           {loading && (
-            <div
-              className="fade-in"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "40px",
-                color: "var(--color-text-secondary)",
-                fontSize: "13px",
-                gap: "10px",
-              }}
-            >
+            <div className="fade-in search-empty-state">
               <Loader size={20} className="spinner" />
-              <span>{t("common.loading")}</span>
+              <span>{t("common.loading", "Loading...")}</span>
             </div>
           )}
 
           {!loading && queryError && (
-            <div
-              className="fade-in"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "40px",
-                color: "var(--color-text-secondary)",
-                fontSize: "14px",
-                gap: "8px",
-              }}
-            >
+            <div className="fade-in search-empty-state">
               <p style={{ color: "var(--color-error, #e53e3e)", margin: 0 }}>
                 {t("search.error", "Search failed")}
               </p>
               <p style={{ fontSize: "13px", margin: 0 }}>{queryError?.message}</p>
-              <button
-                onClick={() => refetch()}
-                style={{
-                  marginTop: "8px",
-                  padding: "6px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid var(--color-border)",
-                  backgroundColor: "transparent",
-                  color: "var(--color-accent)",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                }}
-              >
+              <button type="button" onClick={() => refetch()} className="search-empty-action">
                 {t("common.retry", "Retry")}
               </button>
             </div>
           )}
 
-          {!loading && !queryError && hasSearched && results.length === 0 && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "40px",
-                color: "var(--color-text-secondary)",
-                fontSize: "14px",
-                gap: "8px",
-              }}
-            >
+          {!loading && !queryError && searchEnabled && results.length === 0 && (
+            <div className="fade-in search-empty-state">
               <Search size={28} strokeWidth={1.2} />
-              {t("search.noResults")}
+              {t("search.noResults", "No results found")}
             </div>
           )}
 
-          {!loading && !hasSearched && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "60px 20px",
-                color: "var(--color-text-tertiary)",
-                fontSize: "14px",
-                gap: "8px",
-              }}
-            >
-              <Search size={32} />
-              <span>{t("search.title")}</span>
+          {!loading && !queryError && !searchEnabled && (
+            <div className="fade-in search-empty-state">
+              <Search size={32} strokeWidth={1.2} />
+              <span>{t("search.hintFromSidebar", "Type in the sidebar search box to search your mail")}</span>
             </div>
           )}
 
@@ -282,7 +183,7 @@ export default function SearchView() {
                       hit={hit}
                       isSelected={hit.message_id === selectedId}
                       onClick={() => setSelectedId(hit.message_id)}
-                      query={query}
+                      query={debouncedQuery}
                     />
                   </div>
                 );
@@ -291,15 +192,13 @@ export default function SearchView() {
           )}
         </div>
 
-        {/* Detail panel */}
-        {selectedId && (
-          <div style={{ flex: 1, overflow: "hidden" }}>
-            <MessageDetail
-              messageId={selectedId}
-              onBack={() => setSelectedId(null)}
-            />
-          </div>
-        )}
+        <div className="mail-detail-pane">
+          {selectedId ? (
+            <MessageDetail messageId={selectedId} onBack={() => setSelectedId(null)} />
+          ) : (
+            <MessageDetailEmpty />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -11,15 +11,15 @@
 <p align="center">
   <a href="README.md">English</a>
   ·
-  <a href="https://github.com/QingJ01/Pebble/releases">发布版本</a>
+  <a href="https://github.com/zi-ha/Pebble/releases">发布版本</a>
   ·
   <a href="LICENSE">许可证</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/QingJ01/Pebble/releases"><img src="https://img.shields.io/github/v/release/QingJ01/Pebble?style=flat-square&color=d4714e" alt="Release"></a>
+  <a href="https://github.com/zi-ha/Pebble/releases"><img src="https://img.shields.io/github/v/release/zi-ha/Pebble?style=flat-square&color=d4714e" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="License"></a>
-  <a href="https://github.com/QingJ01/Pebble/actions"><img src="https://img.shields.io/github/actions/workflow/status/QingJ01/Pebble/ci.yml?style=flat-square&label=build" alt="Build"></a>
+  <a href="https://github.com/zi-ha/Pebble/actions"><img src="https://img.shields.io/github/actions/workflow/status/zi-ha/Pebble/ci.yml?style=flat-square&label=build" alt="Build"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Platform">
 </p>
 
@@ -110,7 +110,7 @@ Pebble 目前支持 Gmail、IMAP、POP3，以及实验性的 Outlook 账户。
 
 ### 安装
 
-你可以从 [发布版本](https://github.com/QingJ01/Pebble/releases) 页面下载预构建的桌面安装包。
+你可以从 [发布版本](https://github.com/zi-ha/Pebble/releases) 页面下载预构建的桌面安装包。
 
 Arch Linux 用户可以通过 AUR 安装 `pebble-bin`：
 
@@ -142,7 +142,7 @@ paru -S pebble-bin
 ### 开发环境
 
 ```bash
-git clone https://github.com/QingJ01/Pebble.git
+git clone https://github.com/zi-ha/Pebble.git
 cd Pebble
 
 pnpm install
@@ -242,16 +242,6 @@ Pebble/
 
 快捷键可以在设置中查看和自定义。
 
-## Pebble Web
-
-想要自托管的网页版？**[Pebble Web](https://github.com/QingJ01/Pebble-Web)** 提供与桌面版相同的功能，通过 Docker 部署，任何浏览器即可访问。
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/QingJ01/Pebble-Web/main/docker-compose.yml -o docker-compose.yml && docker compose up -d
-```
-
-Pebble Web 共享相同的 Rust 核心代码和 React 前端。部署到你自己的服务器，随时随地访问邮件。
-
 ## 当前状态
 
 Pebble 正在持续开发中。它可以用于日常测试，但邮件客户端会处理敏感数据，不同邮件服务商的行为也存在差异。测试新版本时，请为重要邮件保留备份，并在服务商网页端核对关键操作。
@@ -275,7 +265,7 @@ Pebble 使用 [GNU Affero General Public License v3.0](LICENSE) 许可证。
 ---
 
 <p align="center">
-  由 <a href="https://github.com/QingJ01">QingJ</a> 构建。
+  由 <a href="https://github.com/zi-ha">zi-ha</a> 构建。
   <br>
   友情链接：<a href="https://linux.do">LINUX DO</a>
 </p>

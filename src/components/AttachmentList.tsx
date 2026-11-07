@@ -98,13 +98,7 @@ export default function AttachmentList({ messageId }: Props) {
   if (attachments.length === 0) return null;
 
   return (
-    <div
-      style={{
-        padding: "12px 16px",
-        borderTop: "1px solid var(--color-border)",
-        backgroundColor: "var(--color-bg)",
-      }}
-    >
+    <div className="message-attachments">
       <div
         style={{
           fontSize: "12px",

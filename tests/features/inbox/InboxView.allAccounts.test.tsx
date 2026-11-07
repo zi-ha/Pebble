@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Account, Folder } from "../../../src/lib/api";
 
@@ -7,11 +7,7 @@ const mocks = vi.hoisted(() => ({
     activeAccountId: null as string | null,
     activeFolderId: "all:inbox" as string | null,
     selectedMessageId: null as string | null,
-    selectedThreadId: null as string | null,
-    threadView: false,
     setSelectedMessage: vi.fn(),
-    setSelectedThreadId: vi.fn(),
-    toggleThreadView: vi.fn(),
   },
   accounts: [
     { id: "account-1", email: "one@example.com" },
@@ -23,7 +19,6 @@ const mocks = vi.hoisted(() => ({
   ] as Folder[],
   useFoldersForAccountsQuery: vi.fn(),
   useMessagesQuery: vi.fn(),
-  useThreadsQuery: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -64,12 +59,7 @@ vi.mock("../../../src/hooks/queries", () => ({
   }),
   useFoldersForAccountsQuery: mocks.useFoldersForAccountsQuery,
   useMessagesQuery: mocks.useMessagesQuery,
-  useThreadsQuery: mocks.useThreadsQuery,
   patchMessagesCache: vi.fn(),
-}));
-
-vi.mock("../../../src/components/SearchBar", () => ({
-  default: () => <div>Search bar</div>,
 }));
 
 vi.mock("../../../src/components/MessageList", () => ({
@@ -78,10 +68,6 @@ vi.mock("../../../src/components/MessageList", () => ({
 
 vi.mock("../../../src/components/MessageDetail", () => ({
   default: () => <div>Message detail</div>,
-}));
-
-vi.mock("../../../src/features/inbox/ThreadView", () => ({
-  default: () => <div>Thread detail</div>,
 }));
 
 vi.mock("../../../src/components/ConfirmDialog", () => ({
@@ -100,8 +86,6 @@ describe("InboxView all accounts", () => {
     mocks.mailState.activeAccountId = null;
     mocks.mailState.activeFolderId = "all:inbox";
     mocks.mailState.selectedMessageId = null;
-    mocks.mailState.selectedThreadId = null;
-    mocks.mailState.threadView = false;
     mocks.useFoldersForAccountsQuery.mockReturnValue({
       data: mocks.folders,
       isFetched: true,
@@ -113,10 +97,28 @@ describe("InboxView all accounts", () => {
       isFetchingNextPage: false,
       fetchNextPage: vi.fn(),
     });
-    mocks.useThreadsQuery.mockReturnValue({
-      data: [],
-      isLoading: false,
-    });
+  });
+
+  it("keeps the reading pane mounted when no message is selected", () => {
+    render(<InboxView />);
+
+    expect(screen.getByText("No message selected")).toBeTruthy();
+  });
+
+  it("drops the folder title bar above the message list", () => {
+    render(<InboxView />);
+
+    expect(document.querySelector(".mail-list-header")).toBeNull();
+    expect(document.querySelector(".mail-list-title")).toBeNull();
+    expect(document.querySelector(".mail-list-pane")).toBeTruthy();
+  });
+
+  it("no longer offers batch selection or a thread view toggle", () => {
+    render(<InboxView />);
+
+    expect(screen.queryByRole("button", { name: "Batch select" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Thread view" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Message view" })).toBeNull();
   });
 
   it("queries all matching inbox folders when all accounts are selected", () => {

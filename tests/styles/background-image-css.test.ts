@@ -10,10 +10,10 @@ describe("background image CSS", () => {
       /\.app-shell--with-background\s+\.app-main-scroll\s*\{[^}]*color-mix\(in srgb,\s*var\(--color-main-bg\)\s*68%,\s*transparent\)/i,
     );
     expect(css).toMatch(
-      /\.app-shell--with-background\s+\.search-toolbar\s*\{[^}]*color-mix\(in srgb,\s*var\(--color-bg\)\s*12%,\s*transparent\)/i,
+      /\.app-shell--with-background\s+\.search-results-header\s*\{[^}]*color-mix\(in srgb,\s*var\(--color-bg\)\s*12%,\s*transparent\)/i,
     );
     expect(css).toMatch(
-      /\.app-shell--with-background\s+\.inbox-toolbar-row\s*\{[^}]*color-mix\(in srgb,\s*var\(--color-bg\)\s*12%,\s*transparent\)/i,
+      /\.app-shell--with-background\s+\.message-detail-header\s*\{[^}]*color-mix\(in srgb,\s*var\(--color-bg\)\s*12%,\s*transparent\)/i,
     );
   });
 });

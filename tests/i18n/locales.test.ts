@@ -105,6 +105,45 @@ describe("locale files", () => {
     expect(zh.privacy.trackerBlockingOff).not.toBe(en.privacy.trackerBlockingOff);
   });
 
+  it("translates every translation engine label in English and Chinese", () => {
+    const en = readLocale("en");
+    const zh = readLocale("zh");
+
+    for (const key of [
+      "providerMicrosoft",
+      "providerDeeplx",
+      "providerDeepl",
+      "providerBaidu",
+      "providerTencent",
+      "providerAliyun",
+      "providerVolcengine",
+      "providerGeneric",
+      "providerLlm",
+      "cloudCredentialHint",
+      "baiduAppId",
+      "baiduSecretKey",
+      "tencentSecretId",
+      "tencentSecretKey",
+      "tencentRegion",
+      "aliyunAccessKeyId",
+      "aliyunAccessKeySecret",
+      "aliyunRegion",
+      "volcAccessKey",
+      "volcSecretKey",
+      "volcRegion",
+    ]) {
+      expect(en.translate[key], `en.translate.${key}`).toBeTruthy();
+      expect(zh.translate[key], `zh.translate.${key}`).toBeTruthy();
+    }
+
+    expect(zh.translate.providerBaidu).toBe("百度翻译");
+    expect(zh.translate.providerTencent).toBe("腾讯云机器翻译");
+    expect(zh.translate.providerAliyun).toBe("阿里云机器翻译");
+    expect(zh.translate.providerVolcengine).toBe("火山翻译");
+    expect(en.translate.providerBaidu).toBe("Baidu Translate");
+    expect(en.translate.providerVolcengine).toBe("Volcengine Translate");
+  });
+
   it("translates TLS certificate account setup labels in English and Chinese", () => {
     const en = readLocale("en");
     const zh = readLocale("zh");

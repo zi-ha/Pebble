@@ -66,6 +66,22 @@ describe("useStarredMessagesQuery", () => {
     expect(starredMessagesQueryKey("account-1")).toEqual(["starred-messages", "account-1"]);
   });
 
+  it("still queries the combined mailbox when no account is selected", async () => {
+    mockInvoke.mockResolvedValueOnce([makeMessage("m-1")]);
+
+    const { result } = renderHook(() => useStarredMessagesQuery(null), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toHaveLength(1));
+    expect(mockInvoke).toHaveBeenCalledWith("list_starred_messages", {
+      accountId: null,
+      limit: STARRED_MESSAGES_PAGE_SIZE,
+      offset: 0,
+    });
+    expect(starredMessagesQueryKey(null)).toEqual(["starred-messages", "all"]);
+  });
+
   it("fetches starred messages with page-size offsets", async () => {
     const firstPage = Array.from({ length: STARRED_MESSAGES_PAGE_SIZE }, (_, index) =>
       makeMessage(`m-${index + 1}`),

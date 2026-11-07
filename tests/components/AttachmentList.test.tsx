@@ -44,4 +44,16 @@ describe("AttachmentList", () => {
     expect(await screen.findByRole("button", { name: "attachments.download: photo.png" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "attachments.download: report.xlsx" })).toBeTruthy();
   });
+
+  it("flows with the message body instead of being capped to a share of the pane", async () => {
+    const { container } = render(<AttachmentList messageId="m1" />);
+    await screen.findByText("photo.png");
+
+    const section = container.querySelector(".message-attachments") as HTMLElement;
+    expect(section).toBeTruthy();
+    // No fixed height, no nested scroll area, no sticky positioning.
+    expect(section.style.maxHeight).toBe("");
+    expect(section.style.overflowY).toBe("");
+    expect(section.style.position).toBe("");
+  });
 });

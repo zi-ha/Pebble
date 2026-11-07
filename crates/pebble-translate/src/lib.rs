@@ -1,8 +1,17 @@
+pub mod aliyun;
+pub mod baidu;
+pub mod caiyun;
+pub mod chunk;
 pub mod deepl;
 pub mod deeplx;
 pub mod generic;
+pub mod huawei;
 pub mod llm;
+pub mod microsoft;
+pub mod sign;
+pub mod tencent;
 pub mod types;
+pub mod volcengine;
 
 use pebble_core::{HttpProxyConfig, PebbleError, Result};
 use types::{TranslateProviderConfig, TranslateResult};
@@ -77,6 +86,135 @@ impl TranslateService {
                 model,
                 mode,
             } => llm::translate(&client, endpoint, api_key, model, mode, text, from, to).await,
+            TranslateProviderConfig::Microsoft {
+                api_key,
+                region,
+                endpoint,
+            } => {
+                microsoft::translate(
+                    &client,
+                    api_key.as_deref(),
+                    region.as_deref(),
+                    endpoint.as_deref(),
+                    text,
+                    from,
+                    to,
+                )
+                .await
+            }
+            TranslateProviderConfig::Baidu {
+                app_id,
+                secret_key,
+                endpoint,
+            } => {
+                baidu::translate(
+                    &client,
+                    app_id,
+                    secret_key,
+                    endpoint.as_deref(),
+                    text,
+                    from,
+                    to,
+                )
+                .await
+            }
+            TranslateProviderConfig::Tencent {
+                secret_id,
+                secret_key,
+                region,
+                project_id,
+                endpoint,
+            } => {
+                tencent::translate(
+                    &client,
+                    &tencent::TencentCredentials {
+                        secret_id,
+                        secret_key,
+                        region: region.as_deref(),
+                        project_id: *project_id,
+                        endpoint: endpoint.as_deref(),
+                    },
+                    text,
+                    from,
+                    to,
+                )
+                .await
+            }
+            TranslateProviderConfig::Aliyun {
+                access_key_id,
+                access_key_secret,
+                region,
+                endpoint,
+            } => {
+                aliyun::translate(
+                    &client,
+                    &aliyun::AliyunCredentials {
+                        access_key_id,
+                        access_key_secret,
+                        region: region.as_deref(),
+                        endpoint: endpoint.as_deref(),
+                    },
+                    text,
+                    from,
+                    to,
+                )
+                .await
+            }
+            TranslateProviderConfig::Volcengine {
+                access_key,
+                secret_key,
+                region,
+                endpoint,
+            } => {
+                volcengine::translate(
+                    &client,
+                    &volcengine::VolcengineCredentials {
+                        access_key,
+                        secret_key,
+                        region: region.as_deref(),
+                        endpoint: endpoint.as_deref(),
+                    },
+                    text,
+                    from,
+                    to,
+                )
+                .await
+            }
+            TranslateProviderConfig::Huawei {
+                access_key,
+                secret_key,
+                project_id,
+                region,
+                endpoint,
+            } => {
+                huawei::translate(
+                    &client,
+                    &huawei::HuaweiCredentials {
+                        access_key,
+                        secret_key,
+                        project_id,
+                        region: region.as_deref(),
+                        endpoint: endpoint.as_deref(),
+                    },
+                    text,
+                    from,
+                    to,
+                )
+                .await
+            }
+            TranslateProviderConfig::Caiyun { token, endpoint } => {
+                caiyun::translate(&client, token, endpoint.as_deref(), text, from, to).await
+            }
+        }
+    }
+
+    /// The engine Pebble uses when the user never configured one: Microsoft's
+    /// keyless endpoint, so translation works out of the box.
+    pub fn builtin_config() -> TranslateProviderConfig {
+        TranslateProviderConfig::Microsoft {
+            api_key: None,
+            region: None,
+            endpoint: None,
         }
     }
 }

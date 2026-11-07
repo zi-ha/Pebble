@@ -135,6 +135,21 @@ describe("Sidebar folder order", () => {
     ]);
   });
 
+  it("keeps the Starred entry when the account has no drafts folder", () => {
+    mocks.folders = [
+      folder("inbox", "inbox", 1),
+      folder("sent", "sent", 2),
+      folder("archive", "archive", 3),
+    ];
+
+    render(<Sidebar />);
+
+    const folderNav = screen.getByRole("navigation", { name: "Mail folders" });
+    const labels = within(folderNav).getAllByRole("button").map((button) => button.textContent);
+
+    expect(labels).toEqual(["Inbox", "Sent", "Archive", "Starred"]);
+  });
+
   it("uses a translucent account selector when an app background is active", () => {
     mocks.accounts = [
       {

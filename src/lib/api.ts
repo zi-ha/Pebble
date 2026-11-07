@@ -298,7 +298,7 @@ export async function listMessages(
 }
 
 export async function listStarredMessages(
-  accountId: string,
+  accountId: string | null,
   limit: number,
   offset: number,
 ): Promise<MessageSummary[]> {

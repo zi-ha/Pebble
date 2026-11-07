@@ -42,7 +42,10 @@ export function buildCommands(t: (key: string, defaultValue: string) => string):
       name: t("commands.openSearch", "Open Search"),
       shortcut: "Ctrl+Shift+F",
       category: t("commands.navigation", "Navigation"),
-      execute: () => useUIStore.getState().setActiveView("search"),
+      execute: () => {
+        useUIStore.getState().setActiveView("search");
+        useUIStore.getState().requestSearchFocus();
+      },
     },
     // View
     {

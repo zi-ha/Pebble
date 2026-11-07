@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSingleton } from "./singleton";
 import i18n from "@/lib/i18n";
 import { getInitialLanguage, LANGUAGE_STORAGE_KEY, type Language } from "@/lib/language";
 import { profileLocalStorage, profileSessionStorage } from "@/lib/profileStorage";
@@ -177,6 +178,9 @@ interface UIState {
   setPollInterval: (secs: number) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  /** Increments each time something asks the sidebar search box to take focus. */
+  searchFocusSignal: number;
+  requestSearchFocus: () => void;
   settingsTab: SettingsTab;
   setSettingsTab: (tab: SettingsTab) => void;
   pendingRuleDraftText: string | null;
@@ -185,7 +189,8 @@ interface UIState {
   setShowFolderUnreadCount: (show: boolean) => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = createSingleton("ui", () =>
+  create<UIState>((set) => ({
   sidebarCollapsed: false,
   activeView: "inbox",
   theme: (profileLocalStorage.getItem("pebble-theme") as Theme) || "light",
@@ -246,13 +251,7 @@ export const useUIStore = create<UIState>((set) => ({
   }),
   clearPendingContact: () => set({ pendingContactId: null }),
   openMessageInInbox: (messageId) => {
-    useMailStore.setState({
-      selectedMessageId: messageId,
-      selectedThreadId: null,
-      threadView: false,
-      selectedMessageIds: new Set(),
-      batchMode: false,
-    });
+    useMailStore.setState({ selectedMessageId: messageId });
     set({ activeView: "inbox" });
   },
   setTheme: (theme) => {
@@ -331,6 +330,13 @@ export const useUIStore = create<UIState>((set) => ({
   },
   searchQuery: "",
   setSearchQuery: (q) => set({ searchQuery: q }),
+  searchFocusSignal: 0,
+  // Expanding first means the box exists by the time the focus effect runs.
+  requestSearchFocus: () =>
+    set((state) => ({
+      searchFocusSignal: state.searchFocusSignal + 1,
+      sidebarCollapsed: false,
+    })),
   settingsTab: (profileSessionStorage.getItem("pebble-settings-tab") as SettingsTab) || "accounts",
   setSettingsTab: (tab) => {
     profileSessionStorage.setItem("pebble-settings-tab", tab);
@@ -343,4 +349,5 @@ export const useUIStore = create<UIState>((set) => ({
     profileLocalStorage.setItem("pebble-show-unread-count", String(show));
     set({ showFolderUnreadCount: show });
   },
-}));
+  })),
+);

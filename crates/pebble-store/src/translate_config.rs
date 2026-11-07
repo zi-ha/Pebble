@@ -154,6 +154,41 @@ mod tests {
     }
 
     #[test]
+    fn saves_every_supported_engine_without_a_check_constraint() {
+        let store = Store::open_in_memory().unwrap();
+        let now = now_timestamp();
+
+        // V19 dropped the stale CHECK list; every engine must round-trip.
+        for provider in [
+            "deeplx",
+            "deepl",
+            "generic_api",
+            "llm",
+            "microsoft",
+            "baidu",
+            "tencent",
+            "aliyun",
+            "volcengine",
+        ] {
+            store
+                .save_translate_config(&TranslateConfig {
+                    id: "active".to_string(),
+                    provider_type: provider.to_string(),
+                    config: "{}".to_string(),
+                    is_enabled: true,
+                    created_at: now,
+                    updated_at: now,
+                })
+                .unwrap_or_else(|e| panic!("saving {provider} failed: {e}"));
+
+            assert_eq!(
+                store.get_translate_config().unwrap().unwrap().provider_type,
+                provider
+            );
+        }
+    }
+
+    #[test]
     fn compare_exchange_translate_config_does_not_overwrite_a_newer_value() {
         let store = Store::open_in_memory().unwrap();
         let now = now_timestamp();

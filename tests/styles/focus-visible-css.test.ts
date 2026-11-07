@@ -10,14 +10,6 @@ describe("focus-visible CSS", () => {
     expect(css).not.toMatch(/\.tiptap:focus\s*\{[^}]*outline\s*:\s*none/i);
   });
 
-  it("uses a custom themed checkbox for batch selection", () => {
-    const css = readFileSync(join(process.cwd(), "src", "styles", "index.css"), "utf8");
-
-    expect(css).toMatch(/\.batch-checkbox\s*\{[^}]*appearance\s*:\s*none/i);
-    expect(css).toMatch(/\.batch-checkbox:checked\s*\{[^}]*background\s*:\s*var\(--color-accent\)/i);
-    expect(css).toMatch(/\.batch-checkbox::before\s*\{[^}]*border-left\s*:/i);
-  });
-
   it("keeps native form controls aligned with the app theme", () => {
     const css = readFileSync(join(process.cwd(), "src", "styles", "index.css"), "utf8");
 

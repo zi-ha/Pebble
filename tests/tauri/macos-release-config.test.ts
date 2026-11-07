@@ -14,11 +14,11 @@ describe("macOS release configuration", () => {
     const releaseWorkflow = readFileSync(resolve(process.cwd(), ".github", "workflows", "release.yml"), "utf8");
     const cargoVersion = cargoToml.match(/^version\s*=\s*"([^"]+)"/m)?.[1];
 
-    expect(packageJson.version).toBe("0.1.6");
+    expect(packageJson.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(tauriConfig.version).toBe(packageJson.version);
     expect(cargoVersion).toBe(packageJson.version);
     expect(changelog).toContain(`## [${packageJson.version}] - `);
-    expect(changelog).toContain(`[Unreleased]: https://github.com/QingJ01/Pebble/compare/v${packageJson.version}...HEAD`);
+    expect(changelog).toContain(`[Unreleased]: https://github.com/zi-ha/Pebble/compare/v${packageJson.version}...HEAD`);
     expect(releaseWorkflow).toContain(`default: v${packageJson.version}`);
   });
 

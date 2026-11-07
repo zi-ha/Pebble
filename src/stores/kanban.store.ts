@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSingleton } from "./singleton";
 import type { KanbanCard, KanbanColumnType } from "@/lib/api";
 import {
   listKanbanCards,
@@ -65,7 +66,8 @@ function buildIdSet(cards: KanbanCard[]): Set<string> {
   return new Set(cards.map((c) => c.message_id));
 }
 
-export const useKanbanStore = create<KanbanState>((set, get) => ({
+export const useKanbanStore = createSingleton("kanban", () =>
+  create<KanbanState>((set, get) => ({
   cards: [],
   cardIdSet: new Set<string>(),
   contextNotes: {},
@@ -196,4 +198,5 @@ export const useKanbanStore = create<KanbanState>((set, get) => ({
       throw err;
     }
   },
-}));
+  })),
+);

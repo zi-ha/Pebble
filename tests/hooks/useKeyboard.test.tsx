@@ -46,11 +46,7 @@ describe("useKeyboard", () => {
       bindings: { ...DEFAULT_BINDINGS, "archive-message": "E" },
       recording: null,
     });
-    useMailStore.setState({
-      selectedMessageId: "message-1",
-      selectedThreadId: null,
-      threadView: false,
-    });
+    useMailStore.setState({ selectedMessageId: "message-1" });
   });
 
   it("refreshes folder unread counts after the archive shortcut succeeds", async () => {

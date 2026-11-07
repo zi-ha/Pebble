@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createSingleton } from "./singleton";
 
 interface ConfirmState {
   isOpen: boolean;
@@ -19,7 +20,8 @@ interface ConfirmState {
   handleCancel: () => void;
 }
 
-export const useConfirmStore = create<ConfirmState>((set, get) => ({
+export const useConfirmStore = createSingleton("confirm", () =>
+  create<ConfirmState>((set, get) => ({
   isOpen: false,
   title: "",
   message: "",
@@ -49,4 +51,5 @@ export const useConfirmStore = create<ConfirmState>((set, get) => ({
     resolve?.(false);
     set({ isOpen: false, resolve: null });
   },
-}));
+  })),
+);
