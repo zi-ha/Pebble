@@ -19,7 +19,6 @@
 <p align="center">
   <a href="https://github.com/zi-ha/Pebble/releases"><img src="https://img.shields.io/github/v/release/zi-ha/Pebble?style=flat-square&color=d4714e" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="License"></a>
-  <a href="https://github.com/zi-ha/Pebble/actions"><img src="https://img.shields.io/github/actions/workflow/status/zi-ha/Pebble/ci.yml?style=flat-square&label=build" alt="Build"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Platform">
 </p>
 
@@ -169,6 +168,12 @@ macOS 构建产物默认不签名，除非你自行配置签名流程。
 ```bash
 sudo xattr -cr /Applications/Pebble.app
 ```
+
+### 发版
+
+发版用的版本号取自应用自身，不需要手写 tag：先把 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 三处版本改成同一个号，并在 `CHANGELOG.md` 里加一节 `## [x.y.z] - 日期`，然后在默认分支上执行 **Actions → Release (Manual) → Run workflow**。
+
+工作流会从 `src-tauri/tauri.conf.json`（也就是「关于」页显示的那个版本）读取版本号；三处不一致、CHANGELOG 缺少对应小节、或该版本已有 tag 时直接报错退出；通过后构建 Windows 安装包，给当前提交打 `v<版本>` 的 tag，并用 CHANGELOG 里那一节作为发布说明创建 GitHub Release。
 
 ## OAuth 配置
 

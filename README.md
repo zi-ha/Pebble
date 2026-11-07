@@ -19,7 +19,6 @@
 <p align="center">
   <a href="https://github.com/zi-ha/Pebble/releases"><img src="https://img.shields.io/github/v/release/zi-ha/Pebble?style=flat-square&color=d4714e" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="License"></a>
-  <a href="https://github.com/zi-ha/Pebble/actions"><img src="https://img.shields.io/github/actions/workflow/status/zi-ha/Pebble/ci.yml?style=flat-square&label=build" alt="Build"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square" alt="Platform">
 </p>
 
@@ -170,6 +169,12 @@ After copying an unsigned macOS build to `/Applications`, run the following comm
 ```bash
 sudo xattr -cr /Applications/Pebble.app
 ```
+
+### Release
+
+Releases are cut from the app's own version number, never from a hand-typed tag. Bump the version in all three manifests (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`) and add a `## [x.y.z] - date` section to `CHANGELOG.md`, then run **Actions → Release (Manual) → Run workflow** on the default branch.
+
+The workflow reads the version from `src-tauri/tauri.conf.json` — the same value the About page reports — refuses to run if the manifests disagree, the changelog has no notes, or a tag for that version already exists, then builds the Windows installer, tags the commit `v<version>` and publishes the GitHub release with that changelog section as its notes.
 
 ## OAuth Configuration
 

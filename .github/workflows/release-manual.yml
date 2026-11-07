@@ -1,0 +1,268 @@
+name: Release (Manual)
+
+# This is the only workflow in the repository. Nothing about the version is typed
+# in by hand: it reads the version the app itself ships with from
+# `src-tauri/tauri.conf.json` (the value the About page reports), insists that
+# `package.json` and `src-tauri/Cargo.toml` agree with it, derives the tag
+# `v<version>` from it, builds the Windows installer, tags the current commit and
+# publishes the GitHub release with the matching CHANGELOG section as its notes.
+#
+# OAuth credentials stay optional: a build without them still ships, it just
+# cannot sign in to Gmail/Outlook through OAuth.
+
+on:
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: Keep the release as a draft instead of publishing it
+        type: boolean
+        default: false
+      prerelease:
+        description: Mark the release as a pre-release (update checks skip it)
+        type: boolean
+        default: false
+      skip_tests:
+        description: Skip fmt/clippy/tests because they were already run locally
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-manual
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish Windows release
+    runs-on: windows-latest
+
+    # No `environment:` on purpose: repository-level variables and secrets resolve
+    # without one, and an environment with protection rules would make this
+    # hand-started workflow wait for approval.
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Resolve version from the app itself
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # Single source of truth: the version Tauri bakes into the binary and the
+          # About page reports through getVersion().
+          $appVersion = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $cargoToml = Get-Content src-tauri/Cargo.toml -Raw
+          if ($cargoToml -notmatch '(?m)^version\s*=\s*"(?<version>[^"]+)"') {
+            throw "Could not read the package version from src-tauri/Cargo.toml."
+          }
+          $cargoVersion = $Matches.version
+
+          if ($appVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "src-tauri/tauri.conf.json version '$appVersion' is not MAJOR.MINOR.PATCH, so it cannot become a tag."
+          }
+
+          $drift = @()
+          if ($packageVersion -ne $appVersion) { $drift += "package.json says '$packageVersion'" }
+          if ($cargoVersion -ne $appVersion) { $drift += "src-tauri/Cargo.toml says '$cargoVersion'" }
+          if ($drift.Count -gt 0) {
+            throw "Version drift: the app is $appVersion but $($drift -join ' and '). Update every manifest before releasing."
+          }
+
+          $changelog = Get-Content CHANGELOG.md -Raw -Encoding utf8
+          if (-not $changelog.Contains("## [$appVersion] - ")) {
+            throw "CHANGELOG.md has no '## [$appVersion] - ' section; add one so the release has notes."
+          }
+
+          if ($env:BRANCH_NAME -ne $env:DEFAULT_BRANCH) {
+            throw "Run this workflow from the default branch ($env:DEFAULT_BRANCH), not '$env:BRANCH_NAME', so the release tag points at reviewable code."
+          }
+
+          $tag = "v$appVersion"
+
+          # A release always implies a tag, so an existing tag is enough to know this
+          # version already shipped. Bumping the version is the only way forward.
+          # `git fetch` prints to stderr when the network hiccups, which Windows
+          # PowerShell turns into a terminating error under "Stop"; checkout already
+          # fetched every tag, so a failed refresh is only worth a warning.
+          $fetchPreference = $ErrorActionPreference
+          $ErrorActionPreference = "Continue"
+          git fetch --tags --force --quiet
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Could not refresh tags from origin; using the tags fetched by checkout."
+          }
+          $ErrorActionPreference = $fetchPreference
+          git rev-parse -q --verify "refs/tags/$tag" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            throw "Tag '$tag' already exists. Bump the version instead of releasing $appVersion twice."
+          }
+
+          Add-Content -Path $env:GITHUB_ENV -Encoding utf8 -Value @("APP_VERSION=$appVersion", "RELEASE_TAG=$tag")
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "Detected Pebble $appVersion in all three manifests; the release tag will be $tag."
+
+      - name: Validate OAuth build config
+        env:
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_ID: ${{ vars.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          # OAuth client IDs are baked into the binary at compile time, so a build
+          # without them simply has no Gmail/Outlook OAuth sign-in. That is fine
+          # for a personal fork, so only an *incomplete* set is an error.
+          $required = @("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "MICROSOFT_CLIENT_ID")
+          $missing = @()
+          foreach ($name in $required) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              $missing += $name
+            }
+          }
+
+          if ($missing.Count -eq 0) {
+            "OAuth client IDs and Google client secret are configured for this release build."
+            exit 0
+          }
+          if ($missing.Count -eq $required.Count) {
+            Write-Warning "OAuth is not configured. This build cannot sign in to Gmail or Outlook through OAuth; IMAP/POP3 accounts still work."
+            exit 0
+          }
+          throw "Incomplete OAuth configuration; missing: $($missing -join ', '). Set all of them or none."
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Rust formatting
+        if: ${{ !inputs.skip_tests }}
+        run: cargo fmt --check
+
+      - name: Check Rust lints
+        if: ${{ !inputs.skip_tests }}
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Run Rust tests
+        if: ${{ !inputs.skip_tests }}
+        run: cargo test --workspace --all-targets
+
+      - name: Run frontend tests
+        if: ${{ !inputs.skip_tests }}
+        run: pnpm test
+
+      - name: Build Windows installer
+        env:
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          MICROSOFT_CLIENT_ID: ${{ vars.MICROSOFT_CLIENT_ID }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+        run: pnpm build:windows
+
+      - name: Collect release artifacts
+        run: |
+          $ErrorActionPreference = "Stop"
+          $artifactDir = "release-artifacts"
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+          $installers = @()
+          foreach ($dir in @("target/release/bundle/nsis", "src-tauri/target/release/bundle/nsis")) {
+            if (Test-Path $dir) {
+              $installers += Get-ChildItem -Path $dir -Filter "*.exe" -File
+            }
+          }
+          if ($installers.Count -eq 0) {
+            throw "No NSIS installer found; the Windows bundle step did not produce an .exe."
+          }
+
+          foreach ($installer in $installers) {
+            Copy-Item -Path $installer.FullName -Destination $artifactDir
+          }
+
+          Get-ChildItem -Path $artifactDir -File | ForEach-Object {
+            $hash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)" | Set-Content -Path "$($_.FullName).sha256" -Encoding ascii
+          }
+
+          Get-ChildItem -Path $artifactDir -File | Select-Object Name, Length
+
+      - name: Create the release and attach the installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IS_DRAFT: ${{ inputs.draft }}
+          IS_PRERELEASE: ${{ inputs.prerelease }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tag = $env:RELEASE_TAG
+          $version = $env:APP_VERSION
+          $notesFile = Join-Path $env:RUNNER_TEMP "release-notes.md"
+
+          # Release notes are the CHANGELOG section for exactly this version.
+          $lines = Get-Content CHANGELOG.md -Encoding utf8
+          $heading = $lines | Select-String -Pattern ('^## \[' + [regex]::Escape($version) + '\]') | Select-Object -First 1
+          if (-not $heading) {
+            throw "CHANGELOG.md has no section for $version."
+          }
+          $body = @()
+          for ($i = $heading.LineNumber; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^## \[') { break }
+            $body += $lines[$i]
+          }
+          ($body -join "`n").Trim() | Set-Content -Path $notesFile -Encoding utf8
+
+          # Create as a draft first so the assets are all attached before anyone can
+          # download a half-populated release, then flip it live.
+          $createArgs = @(
+            "release", "create", $tag,
+            "--draft",
+            "--target", $env:COMMIT_SHA,
+            "--title", "Pebble $tag",
+            "--notes-file", $notesFile
+          )
+          if ($env:IS_PRERELEASE -eq "true") { $createArgs += "--prerelease" }
+
+          & gh @createArgs
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed for $tag." }
+
+          $assets = @(Get-ChildItem -Path release-artifacts -File | Select-Object -ExpandProperty FullName)
+          & gh release upload $tag @assets
+          if ($LASTEXITCODE -ne 0) { throw "gh release upload failed for $tag." }
+
+          if ($env:IS_DRAFT -eq "true") {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "Release $tag is published as a draft; review it and press Publish when ready."
+            exit 0
+          }
+
+          & gh release edit $tag --draft=false
+          if ($LASTEXITCODE -ne 0) { throw "gh release edit failed for $tag." }
+
+          $url = & gh release view $tag --json url --jq .url
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "Published $url"

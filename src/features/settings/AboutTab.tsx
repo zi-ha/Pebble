@@ -39,7 +39,10 @@ export default function AboutTab() {
   const diagnosticClickTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    getVersion().then(setAppVersion).catch(() => setAppVersion("0.1.6"));
+    // Outside the Tauri shell (browser preview, tests) getVersion() rejects.
+    // Report an unknown-but-old version instead of a literal that would drift on
+    // every release, and let the update check err on the side of "newer exists".
+    getVersion().then(setAppVersion).catch(() => setAppVersion("0.0.0"));
   }, []);
 
   useEffect(() => () => {

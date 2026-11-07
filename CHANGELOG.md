@@ -11,11 +11,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Added Huawei Cloud text translation (华为云文本翻译) and Caiyun Xiaoyi (彩云小译) to the translation engines, alongside the built-in Microsoft endpoint and the DeepLX, DeepL, Baidu, Tencent Cloud, Alibaba Cloud and Volcengine options. Huawei needs the AK/SK pair plus the project ID; Caiyun needs a single access token and only translates between Chinese, English and Japanese.
+- Added a `Release (Manual)` workflow: it reads the version the app ships with, refuses to build when the manifests disagree, the changelog has no section for that version or the tag already exists, then builds the Windows installer, tags the commit and publishes the release. A released tag can no longer drift from the version in the binary.
 
 ### Changed
 
 - Update checks and the About page now point at `zi-ha/Pebble`.
-- The release workflow no longer fails when no OAuth credentials are configured: a build without them warns and continues instead, since a fork without a Google/Microsoft OAuth client can still ship (only Gmail/Outlook OAuth sign-in is unavailable; IMAP and POP3 keep working). A partially configured set is still an error.
+- The only workflow left is `Release (Manual)`. Its OAuth check warns and continues when nothing is configured, and fails only on a partially configured set (that build cannot sign in to Gmail or Outlook through OAuth; IMAP and POP3 keep working).
 - Release tags without a patch number (for example `0.20`) are compared numerically instead of as raw strings, so they register correctly as newer than `0.1.6`.
 - The mail area is always three columns now: sidebar, message list, reading pane. The list keeps a fixed width and the reading pane stays mounted with a "no message selected" placeholder instead of collapsing.
 - Removed the batch-selection and thread/message view buttons, along with the thread view itself — mail is only shown as individual messages.
@@ -25,6 +26,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Search now lives in the sidebar: the inbox toolbar and the search view no longer carry their own search box, and results render in the main area while you type.
 - The collapsed sidebar, the command palette entry and the search shortcut all focus the sidebar search box.
 - Compacted the reading pane header in the style of Apple Mail: the sender line is a single row (sender + date) and recipients/address details expand from it, giving roughly 60px more height to the message body. Attachments are capped at 38% of the pane instead of pushing the body short.
+
+### Removed
+
+- Removed the upstream `ci.yml` (rebuilt all three platforms on every push to `master`) and `release.yml` (multi-platform release on tag push). `Release (Manual)` replaces both: one hand-started job that builds the Windows installer and publishes it.
 
 ### Fixed
 
