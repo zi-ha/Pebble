@@ -40,8 +40,17 @@ describe("manual release workflow", () => {
   });
 
   it("refuses to release a version that already has a tag", () => {
-    expect(workflow).toContain('git rev-parse -q --verify "refs/tags/$tag"');
+    // `git tag --list` always exits 0. `git rev-parse --verify` exits 1 when the
+    // tag is missing, and that leftover $LASTEXITCODE becomes the step's exit
+    // code — the step then "fails" with no log output at all.
+    expect(workflow).toContain("git tag --list $tag");
+    expect(workflow).not.toMatch(/git rev-parse[^\n]*--verify[^\n]*refs\/tags/);
     expect(workflow).toContain("already exists");
+  });
+
+  it("never lets a stray exit code fail the version step", () => {
+    expect(workflow).toContain("exit 0");
+    expect(workflow).toContain("$LASTEXITCODE -ne 0");
   });
 
   it("uploads the built installer to the release it created", () => {
