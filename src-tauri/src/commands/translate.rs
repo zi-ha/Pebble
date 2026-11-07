@@ -1,11 +1,11 @@
 use super::network::get_global_proxy_raw;
 use crate::commands::encrypted_store::{ACTIVE_TRANSLATE_CONFIG_ID, TRANSLATE_CONFIG_PURPOSE};
+use crate::core::{now_timestamp, PebbleError, TranslateConfig};
+use crate::crypto::CryptoService;
 use crate::state::AppState;
-use pebble_core::{now_timestamp, PebbleError, TranslateConfig};
-use pebble_crypto::CryptoService;
-use pebble_store::Store;
-use pebble_translate::types::{TranslateProviderConfig, TranslateResult};
-use pebble_translate::TranslateService;
+use crate::store::Store;
+use crate::translate::types::{TranslateProviderConfig, TranslateResult};
+use crate::translate::TranslateService;
 use tauri::State;
 
 /// Decode a hex string to bytes.
@@ -65,7 +65,7 @@ fn decrypt_config_with_store(
         return Ok(stored.to_string());
     }
     let bytes = hex_decode(stored)?;
-    let needs_migration = pebble_crypto::CryptoService::ciphertext_needs_migration(&bytes);
+    let needs_migration = crate::crypto::CryptoService::ciphertext_needs_migration(&bytes);
     let decrypted =
         crypto.decrypt_for(TRANSLATE_CONFIG_PURPOSE, ACTIVE_TRANSLATE_CONFIG_ID, &bytes)?;
     let plaintext = String::from_utf8(decrypted)
@@ -315,7 +315,7 @@ pub async fn test_translate_connection(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pebble_store::Store;
+    use crate::store::Store;
 
     fn save_config(store: &Store, config: &str) {
         let now = now_timestamp();
@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn legacy_encrypted_translate_config_is_lazily_migrated_to_v1() {
-        let crypto = pebble_crypto::CryptoService::from_key([11_u8; 32]);
+        let crypto = crate::crypto::CryptoService::from_key([11_u8; 32]);
         let store = Store::open_in_memory().unwrap();
         let plaintext = r#"{"api_key":"secret"}"#;
         let legacy = hex_encode(&crypto.encrypt(plaintext.as_bytes()).unwrap());
@@ -424,7 +424,7 @@ mod tests {
 
         let migrated_hex = store.get_translate_config().unwrap().unwrap().config;
         let migrated = hex_decode(&migrated_hex).unwrap();
-        assert!(!pebble_crypto::CryptoService::ciphertext_needs_migration(
+        assert!(!crate::crypto::CryptoService::ciphertext_needs_migration(
             &migrated
         ));
         assert_eq!(
@@ -441,7 +441,7 @@ mod tests {
 
     #[test]
     fn plaintext_translate_config_is_lazily_migrated_to_v1() {
-        let crypto = pebble_crypto::CryptoService::from_key([11_u8; 32]);
+        let crypto = crate::crypto::CryptoService::from_key([11_u8; 32]);
         let store = Store::open_in_memory().unwrap();
         let plaintext = r#"{"api_key":"secret"}"#;
         save_config(&store, plaintext);
@@ -453,7 +453,7 @@ mod tests {
 
         let migrated_hex = store.get_translate_config().unwrap().unwrap().config;
         let migrated = hex_decode(&migrated_hex).unwrap();
-        assert!(!pebble_crypto::CryptoService::ciphertext_needs_migration(
+        assert!(!crate::crypto::CryptoService::ciphertext_needs_migration(
             &migrated
         ));
     }

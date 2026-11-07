@@ -201,8 +201,8 @@ Copy `.env.example` to `.env`, then fill the provider values you need.
 | `pnpm build:windows` | Build the Windows NSIS installer. |
 | `pnpm build:macos` | Build unsigned macOS `.app` and `.dmg` bundles. |
 | `pnpm build:linux` | Build Linux `.AppImage`, `.deb`, and `.rpm` packages. |
-| `cargo test -p pebble-mail` | Run the mail crate tests. |
-| `cargo check` | Check the Rust workspace. |
+| `cargo test -p pebble mail::` | Run the mail module tests. |
+| `cargo check` | Check the Rust crate. |
 
 ## Project Structure
 
@@ -214,19 +214,20 @@ Pebble/
 |   |-- hooks/              React hooks and query helpers
 |   |-- lib/                IPC API, i18n, utilities
 |   `-- stores/             Zustand stores
-|-- src-tauri/              Tauri application and IPC commands
-|-- crates/                 Rust workspace crates
-|   |-- pebble-core/        Shared types and errors
-|   |-- pebble-store/       SQLite persistence
-|   |-- pebble-mail/        Mail providers and sync
-|   |-- pebble-search/      Tantivy search index
-|   |-- pebble-crypto/      Credential encryption
-|   |-- pebble-oauth/       OAuth 2.0 and PKCE
-|   |-- pebble-rules/       Rules engine
-|   |-- pebble-translate/   Translation providers
-|   `-- pebble-privacy/     HTML sanitizing and tracker controls
+|-- src-tauri/              Tauri application
+|   `-- src/
+|       |-- commands/       IPC commands exposed to the frontend
+|       |-- core/           Shared types and errors
+|       |-- store/          SQLite persistence
+|       |-- mail/           Mail providers and sync
+|       |-- search/         Tantivy search index
+|       |-- crypto/         Credential encryption
+|       |-- oauth/          OAuth 2.0 and PKCE
+|       |-- rules/          Rules engine
+|       |-- translate/      Translation providers
+|       `-- privacy/        HTML sanitizing and tracker controls
 |-- tests/                  Frontend tests
-`-- site/                   Static project site and screenshots
+`-- docs/                   Design notes and plans
 ```
 
 ## Keyboard Shortcuts

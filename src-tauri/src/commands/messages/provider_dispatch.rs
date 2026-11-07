@@ -1,5 +1,5 @@
-use pebble_core::{PebbleError, ProviderType, Result};
-use pebble_mail::{GmailProvider, ImapProvider, OutlookProvider};
+use crate::core::{PebbleError, ProviderType, Result};
+use crate::mail::{GmailProvider, ImapProvider, OutlookProvider};
 
 use crate::state::AppState;
 

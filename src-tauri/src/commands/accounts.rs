@@ -7,14 +7,14 @@ use crate::commands::network::{
     AccountProxyMode, AccountProxySetting,
 };
 use crate::commands::oauth::ensure_account_oauth_auth;
-use crate::state::AppState;
-use pebble_core::traits::FolderProvider;
-use pebble_core::{new_id, now_timestamp, Account, HttpProxyConfig, PebbleError, ProviderType};
-use pebble_mail::GmailProvider;
-use pebble_mail::OutlookProvider;
-use pebble_mail::{
+use crate::core::traits::FolderProvider;
+use crate::core::{new_id, now_timestamp, Account, HttpProxyConfig, PebbleError, ProviderType};
+use crate::mail::GmailProvider;
+use crate::mail::OutlookProvider;
+use crate::mail::{
     ConnectionSecurity, ImapConfig, Pop3Config, Pop3Provider, ProxyConfig, SmtpConfig,
 };
+use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -328,9 +328,9 @@ pub async fn add_account(
     state: State<'_, AppState>,
     request: AddAccountRequest,
 ) -> std::result::Result<Account, PebbleError> {
-    pebble_store::accounts::validate_sync_range_days(request.sync_range_days)?;
+    crate::store::accounts::validate_sync_range_days(request.sync_range_days)?;
     let now = now_timestamp();
-    pebble_mail::sender::sender_mailbox(&pebble_core::EmailAddress {
+    crate::mail::sender::sender_mailbox(&crate::core::EmailAddress {
         name: Some(request.display_name.clone()),
         address: request.email.clone(),
     })?;
@@ -366,7 +366,7 @@ pub async fn add_account(
 
     let existing_accounts = state.store.list_accounts()?;
     let account = Account {
-        account_label: pebble_store::accounts::normalize_account_label(
+        account_label: crate::store::accounts::normalize_account_label(
             request.account_label.as_deref(),
         )?,
         provider_display_name: None,
@@ -433,7 +433,7 @@ pub async fn add_account(
         state.store.update_sync_state(&account.id, |s| {
             s.provider = Some(provider_slug.to_string());
             s.sync_range_days = request.sync_range_days;
-            s.sync_since = pebble_store::accounts::sync_range_cutoff(request.sync_range_days, now);
+            s.sync_since = crate::store::accounts::sync_range_cutoff(request.sync_range_days, now);
             // New IMAP accounts start with Inbox only. Users can opt into
             // additional mailboxes from the account editor after the account
             // exists and its saved credentials can be used for IMAP LIST.
@@ -472,11 +472,11 @@ pub async fn update_account(
     account_label: Option<String>,
 ) -> std::result::Result<(), PebbleError> {
     validate_account_color(account_color.as_deref())?;
-    pebble_mail::sender::sender_mailbox(&pebble_core::EmailAddress {
+    crate::mail::sender::sender_mailbox(&crate::core::EmailAddress {
         name: Some(display_name.clone()),
         address: email.clone(),
     })?;
-    pebble_store::accounts::normalize_account_label(account_label.as_deref())?;
+    crate::store::accounts::normalize_account_label(account_label.as_deref())?;
 
     let credentials_dirty = password.is_some()
         || imap_host.is_some()
@@ -803,7 +803,7 @@ pub async fn test_imap_connection(
         request.email.as_deref().unwrap_or_default(),
         &password,
     );
-    let config = pebble_mail::ImapConfig {
+    let config = crate::mail::ImapConfig {
         host: request.imap_host,
         port: request.imap_port,
         username,
@@ -813,9 +813,9 @@ pub async fn test_imap_connection(
         proxy,
     };
     if has_credentials {
-        pebble_mail::ImapProvider::test_connection_with_login(&config).await
+        crate::mail::ImapProvider::test_connection_with_login(&config).await
     } else {
-        pebble_mail::ImapProvider::test_connection(&config).await
+        crate::mail::ImapProvider::test_connection(&config).await
     }
 }
 
@@ -926,7 +926,7 @@ pub async fn test_account_connection(
         credentials.proxy_mode,
         credentials.imap.proxy.clone(),
     )?;
-    pebble_mail::ImapProvider::test_connection_with_login(&credentials.imap).await
+    crate::mail::ImapProvider::test_connection_with_login(&credentials.imap).await
 }
 
 #[tauri::command]
@@ -1180,7 +1180,7 @@ mod tests {
 
         set_account_proxy_on_credentials(
             &mut credentials,
-            Some(pebble_core::HttpProxyConfig {
+            Some(crate::core::HttpProxyConfig {
                 host: "10.0.0.2".to_string(),
                 port: 1080,
             }),

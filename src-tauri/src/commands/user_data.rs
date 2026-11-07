@@ -1,8 +1,8 @@
 use crate::commands::encrypted_store::{
     load_secure_user_data, lock_secure_user_data_key, store_secure_user_data,
 };
+use crate::core::{new_id, now_timestamp, PebbleError};
 use crate::state::AppState;
-use pebble_core::{new_id, now_timestamp, PebbleError};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::State;
@@ -197,9 +197,9 @@ async fn set_email_signature_for_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pebble_crypto::CryptoService;
-    use pebble_search::TantivySearch;
-    use pebble_store::Store;
+    use crate::crypto::CryptoService;
+    use crate::search::TantivySearch;
+    use crate::store::Store;
     use std::sync::Arc;
 
     fn request(name: &str, deduplicate_by_content: bool) -> SaveEmailTemplateRequest {

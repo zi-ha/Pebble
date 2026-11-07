@@ -1,7 +1,7 @@
+use crate::crypto::CryptoService;
 use crate::realtime::SyncTrigger;
-use pebble_crypto::CryptoService;
-use pebble_search::TantivySearch;
-use pebble_store::Store;
+use crate::search::TantivySearch;
+use crate::store::Store;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;

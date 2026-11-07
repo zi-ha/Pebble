@@ -1,5 +1,5 @@
+use crate::core::{Message, MessageSummary, PebbleError};
 use crate::state::AppState;
-use pebble_core::{Message, MessageSummary, PebbleError};
 use tauri::State;
 
 #[tauri::command]

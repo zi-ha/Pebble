@@ -3581,23 +3581,39 @@ dependencies = [
 name = "pebble"
 version = "0.1.7"
 dependencies = [
+ "aes-gcm",
+ "ammonia",
+ "async-imap",
+ "async-trait",
+ "base64 0.22.1",
+ "futures",
+ "hex",
+ "hmac",
+ "htmlescape",
+ "keyring",
  "lettre",
+ "lol_html",
  "mac-notification-sys",
+ "mail-parser",
+ "md-5",
+ "native-tls",
  "notify-rust",
+ "oauth2",
  "opener",
- "pebble-core",
- "pebble-crypto",
- "pebble-mail",
- "pebble-oauth",
- "pebble-privacy",
- "pebble-rules",
- "pebble-search",
- "pebble-store",
- "pebble-translate",
+ "percent-encoding",
+ "r2d2",
+ "r2d2_sqlite",
+ "rand 0.8.5",
  "reqwest 0.12.28",
+ "ring",
+ "rusqlite",
+ "rustls",
  "semver",
  "serde",
  "serde_json",
+ "sha1",
+ "sha2",
+ "tantivy",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",
@@ -3605,147 +3621,21 @@ dependencies = [
  "tauri-plugin-notification",
  "tauri-plugin-single-instance",
  "tauri-winrt-notification",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "windows-registry",
-]
-
-[[package]]
-name = "pebble-core"
-version = "0.1.7"
-dependencies = [
- "async-trait",
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
-name = "pebble-crypto"
-version = "0.1.7"
-dependencies = [
- "aes-gcm",
- "hex",
- "keyring",
- "pebble-core",
- "rand 0.8.5",
- "ring",
- "serde",
- "tracing",
- "zeroize",
-]
-
-[[package]]
-name = "pebble-mail"
-version = "0.1.7"
-dependencies = [
- "async-imap",
- "async-trait",
- "futures",
- "lettre",
- "mail-parser",
- "native-tls",
- "pebble-core",
- "pebble-store",
- "rand 0.8.5",
- "reqwest 0.12.28",
- "rustls",
- "serde",
- "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tokio-native-tls",
  "tokio-rustls",
  "tokio-socks",
  "tracing",
- "utf7-imap",
- "webpki-roots 0.26.11",
-]
-
-[[package]]
-name = "pebble-oauth"
-version = "0.1.7"
-dependencies = [
- "oauth2",
- "pebble-core",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
  "url",
-]
-
-[[package]]
-name = "pebble-privacy"
-version = "0.1.7"
-dependencies = [
- "ammonia",
- "htmlescape",
- "lol_html",
- "pebble-core",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "pebble-rules"
-version = "0.1.7"
-dependencies = [
- "pebble-core",
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "pebble-search"
-version = "0.1.7"
-dependencies = [
- "pebble-core",
- "tantivy",
- "thiserror 2.0.18",
- "tracing",
-]
-
-[[package]]
-name = "pebble-store"
-version = "0.1.7"
-dependencies = [
- "pebble-core",
- "r2d2",
- "r2d2_sqlite",
- "reqwest 0.12.28",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
+ "utf7-imap",
  "uuid",
-]
-
-[[package]]
-name = "pebble-translate"
-version = "0.1.7"
-dependencies = [
- "base64 0.22.1",
- "hex",
- "hmac",
- "md-5",
- "pebble-core",
- "percent-encoding",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha1",
- "sha2",
- "tokio",
- "tracing",
+ "webpki-roots 0.26.11",
+ "windows-registry",
+ "zeroize",
 ]
 
 [[package]]

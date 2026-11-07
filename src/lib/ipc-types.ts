@@ -9,7 +9,7 @@
 
 // ─── Core domain types ─────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → Account */
+/** @rust src-tauri/src/core/types.rs → Account */
 export interface Account {
   account_label?: string | null;
   provider_display_name?: string | null;
@@ -23,7 +23,7 @@ export interface Account {
   updated_at: number;
 }
 
-/** @rust pebble-core/src/types.rs → Folder */
+/** @rust src-tauri/src/core/types.rs → Folder */
 export interface Folder {
   id: string;
   account_id: string;
@@ -43,7 +43,7 @@ export interface ImapSyncFolderSettings {
   selected_remote_ids: string[];
 }
 
-/** @rust pebble-core/src/types.rs → EmailAddress */
+/** @rust src-tauri/src/core/types.rs → EmailAddress */
 export interface EmailAddress {
   name: string | null;
   address: string;
@@ -51,7 +51,7 @@ export interface EmailAddress {
 
 /**
  * Lightweight message data for list views (no body fields).
- * @rust pebble-core/src/types.rs → MessageSummary
+ * @rust src-tauri/src/core/types.rs → MessageSummary
  */
 export interface MessageSummary {
   id: string;
@@ -82,7 +82,7 @@ export interface MessageSummary {
 
 /**
  * Full message including body content.
- * @rust pebble-core/src/types.rs → Message
+ * @rust src-tauri/src/core/types.rs → Message
  */
 export interface Message extends MessageSummary {
   body_text: string;
@@ -135,14 +135,14 @@ export interface NotificationStatus {
   app_id: string | null;
 }
 
-/** @rust pebble-core/src/types.rs → RenderedHtml */
+/** @rust src-tauri/src/core/types.rs → RenderedHtml */
 export interface RenderedHtml {
   html: string;
   trackers_blocked: { domain: string; tracker_type: string }[];
   images_blocked: number;
 }
 
-/** @rust pebble-core/src/traits.rs → SearchHit */
+/** @rust src-tauri/src/core/traits.rs → SearchHit */
 export interface SearchHit {
   message_id: string;
   score: number;
@@ -155,13 +155,13 @@ export interface SearchHit {
 /**
  * Serde external tagging: unit variants serialize as strings, tuple variants
  * as `{ VariantName: value }`.
- * @rust pebble-core/src/types.rs → PrivacyMode
+ * @rust src-tauri/src/core/types.rs → PrivacyMode
  */
 export type PrivacyMode = "Strict" | { TrustSender: string } | "LoadOnce" | "Off";
 
 // ─── Mail config types ──────────────────────────────────────────────────────────
 
-/** @rust pebble-mail/src/imap.rs → ConnectionSecurity (rename_all = "lowercase") */
+/** @rust src-tauri/src/mail/imap.rs → ConnectionSecurity (rename_all = "lowercase") */
 export type ConnectionSecurity = "tls" | "starttls" | "plain";
 
 /** @rust src-tauri/src/commands/accounts.rs → AddAccountRequest */
@@ -185,7 +185,7 @@ export interface AddAccountRequest {
   proxy_port?: number;
 }
 
-/** @rust pebble-core/src/types.rs -> HttpProxyConfig */
+/** @rust src-tauri/src/core/types.rs -> HttpProxyConfig */
 export interface HttpProxyConfig {
   host: string;
   port: number;
@@ -202,7 +202,7 @@ export interface AccountProxySetting {
 
 // ─── Attachment types ───────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → Attachment */
+/** @rust src-tauri/src/core/types.rs → Attachment */
 export interface Attachment {
   id: string;
   message_id: string;
@@ -216,10 +216,10 @@ export interface Attachment {
 
 // ─── Kanban types ───────────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → KanbanColumn (rename_all = "lowercase") */
+/** @rust src-tauri/src/core/types.rs → KanbanColumn (rename_all = "lowercase") */
 export type KanbanColumnType = "todo" | "waiting" | "done";
 
-/** @rust pebble-core/src/types.rs → KanbanCard */
+/** @rust src-tauri/src/core/types.rs → KanbanCard */
 export interface KanbanCard {
   message_id: string;
   column: KanbanColumnType;
@@ -230,7 +230,7 @@ export interface KanbanCard {
 
 // ─── Snooze types ───────────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → SnoozedMessage */
+/** @rust src-tauri/src/core/types.rs → SnoozedMessage */
 export interface SnoozedMessage {
   message_id: string;
   snoozed_at: number;
@@ -240,7 +240,7 @@ export interface SnoozedMessage {
 
 // ─── Trusted Sender types ───────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → TrustedSender */
+/** @rust src-tauri/src/core/types.rs → TrustedSender */
 export interface TrustedSender {
   account_id: string;
   email: string;
@@ -251,7 +251,7 @@ export interface TrustedSender {
 
 // ─── Rule types ─────────────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → Rule */
+/** @rust src-tauri/src/core/types.rs → Rule */
 export interface Rule {
   id: string;
   name: string;
@@ -282,7 +282,7 @@ export interface AdvancedSearchQuery {
 
 // ─── Translate types ────────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → TranslateConfig */
+/** @rust src-tauri/src/core/types.rs → TranslateConfig */
 export interface TranslateConfig {
   id: string;
   provider_type: string;
@@ -292,7 +292,7 @@ export interface TranslateConfig {
   updated_at: number;
 }
 
-/** @rust pebble-translate/src/types.rs → TranslateResult + BilingualSegment */
+/** @rust src-tauri/src/translate/types.rs → TranslateResult + BilingualSegment */
 export interface TranslateResult {
   translated: string;
   segments: { source: string; target: string }[];
@@ -300,7 +300,7 @@ export interface TranslateResult {
 
 // ─── Thread types ───────────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → ThreadSummary */
+/** @rust src-tauri/src/core/types.rs → ThreadSummary */
 export interface ThreadSummary {
   thread_id: string;
   subject: string;
@@ -315,7 +315,7 @@ export interface ThreadSummary {
 
 // ─── Label types ────────────────────────────────────────────────────────────────
 
-/** @rust pebble-store/src/labels.rs → Label */
+/** @rust src-tauri/src/store/labels.rs → Label */
 export interface Label {
   id: string;
   name: string;
@@ -326,7 +326,7 @@ export interface Label {
 
 // ─── Cloud Sync types ───────────────────────────────────────────────────────────
 
-/** @rust pebble-store/src/cloud_sync.rs → BackupPreview */
+/** @rust src-tauri/src/store/cloud_sync.rs → BackupPreview */
 export interface BackupPreview {
   version: number;
   exported_at: number;
@@ -344,10 +344,10 @@ export interface BackupPreview {
 
 // ─── Contacts types ─────────────────────────────────────────────────────────────
 
-/** @rust pebble-core/src/types.rs → ContactEmailLabel */
+/** @rust src-tauri/src/core/types.rs → ContactEmailLabel */
 export type ContactEmailLabel = "work" | "personal" | "other";
 
-/** @rust pebble-core/src/types.rs → ContactEmail */
+/** @rust src-tauri/src/core/types.rs → ContactEmail */
 export interface ContactEmail {
   id: string;
   address: string;
@@ -355,7 +355,7 @@ export interface ContactEmail {
   is_primary: boolean;
 }
 
-/** @rust pebble-core/src/types.rs → Contact */
+/** @rust src-tauri/src/core/types.rs → Contact */
 export interface Contact {
   id: string;
   display_name: string;
@@ -366,7 +366,7 @@ export interface Contact {
   updated_at: number;
 }
 
-/** @rust pebble-core/src/types.rs → ContactEmailInput */
+/** @rust src-tauri/src/core/types.rs → ContactEmailInput */
 export interface ContactEmailInput {
   id?: string | null;
   address: string;
@@ -374,7 +374,7 @@ export interface ContactEmailInput {
   is_primary: boolean;
 }
 
-/** @rust pebble-core/src/types.rs → ContactInput */
+/** @rust src-tauri/src/core/types.rs → ContactInput */
 export interface ContactInput {
   id?: string | null;
   display_name: string;
@@ -383,10 +383,10 @@ export interface ContactInput {
   emails: ContactEmailInput[];
 }
 
-/** @rust pebble-core/src/types.rs → ContactSuggestionSource */
+/** @rust src-tauri/src/core/types.rs → ContactSuggestionSource */
 export type ContactSuggestionSource = "saved" | "recent";
 
-/** @rust pebble-core/src/types.rs → ContactSuggestion */
+/** @rust src-tauri/src/core/types.rs → ContactSuggestion */
 export interface ContactSuggestion {
   contact_id: string | null;
   name: string | null;
@@ -396,7 +396,7 @@ export interface ContactSuggestion {
   last_interaction_at: number | null;
 }
 
-/** @rust pebble-core/src/types.rs → VcardImportResult */
+/** @rust src-tauri/src/core/types.rs → VcardImportResult */
 export interface VcardImportResult {
   created: number;
   merged: number;
@@ -405,7 +405,7 @@ export interface VcardImportResult {
   errors: string[];
 }
 
-/** @rust pebble-core/src/types.rs → KnownContact */
+/** @rust src-tauri/src/core/types.rs → KnownContact */
 export interface KnownContact {
   name: string | null;
   address: string;

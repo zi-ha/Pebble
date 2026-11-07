@@ -45,12 +45,12 @@ fn load_or_create_profile_id(app_data_dir: &Path) -> std::io::Result<String> {
             if !id.is_empty() {
                 return Ok(id.to_string());
             }
-            let id = pebble_core::new_id();
+            let id = crate::core::new_id();
             std::fs::write(&id_path, &id)?;
             Ok(id)
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            let id = pebble_core::new_id();
+            let id = crate::core::new_id();
             std::fs::write(&id_path, &id)?;
             Ok(id)
         }

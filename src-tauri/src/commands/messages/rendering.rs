@@ -1,7 +1,7 @@
+use crate::core::{Message, PebbleError, PrivacyMode, RenderedHtml, TrustType};
+use crate::privacy::PrivacyGuard;
 use crate::state::AppState;
-use pebble_core::{Message, PebbleError, PrivacyMode, RenderedHtml, TrustType};
-use pebble_privacy::PrivacyGuard;
-use pebble_store::Store;
+use crate::store::Store;
 use tauri::State;
 
 #[tauri::command]
@@ -87,7 +87,7 @@ fn resolve_privacy_mode(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pebble_core::{
+    use crate::core::{
         new_id, now_timestamp, Account, EmailAddress, Folder, FolderRole, FolderType, Message,
         ProviderType, TrustType, TrustedSender,
     };

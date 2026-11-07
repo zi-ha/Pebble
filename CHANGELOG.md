@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- Flattened the Rust workspace back into a single `pebble` crate: the nine `crates/pebble-*` libraries now live under `src-tauri/src/{core,store,mail,search,rules,privacy,crypto,oauth,translate}`. `Cargo.toml` has one workspace member, the `rusqlite` feature toggle is gone, and per-crate commands become module filters (`cargo test -p pebble mail::`).
+- `package.json` is the single source of truth for the pnpm version; the release workflow no longer pins `9.12.3` next to `packageManager`, which made `pnpm/action-setup` fail with "Multiple versions of pnpm specified".
+
 ## [0.1.7] - 2026-11-07
 
 ### Added

@@ -1,7 +1,7 @@
+use crate::core::Result;
+use crate::crypto::CryptoService;
 use crate::state::AppState;
-use pebble_core::Result;
-use pebble_crypto::CryptoService;
-use pebble_store::Store;
+use crate::store::Store;
 use std::sync::Arc;
 use tokio::sync::OwnedMutexGuard;
 
@@ -113,7 +113,7 @@ pub(crate) fn store_secure_user_data(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pebble_core::{now_timestamp, Account, ProviderType};
+    use crate::core::{now_timestamp, Account, ProviderType};
 
     fn insert_account(store: &Store, id: &str) {
         store

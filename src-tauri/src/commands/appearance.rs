@@ -1,4 +1,4 @@
-use pebble_core::{new_id, PebbleError};
+use crate::core::{new_id, PebbleError};
 use serde::Serialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};

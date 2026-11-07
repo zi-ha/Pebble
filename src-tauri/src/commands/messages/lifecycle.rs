@@ -1,7 +1,7 @@
 use crate::commands::gmail_labels::gmail_move_label_delta;
+use crate::core::traits::{FolderProvider, LabelProvider};
+use crate::core::{FolderRole, Message, PebbleError, ProviderType};
 use crate::state::AppState;
-use pebble_core::traits::{FolderProvider, LabelProvider};
-use pebble_core::{FolderRole, Message, PebbleError, ProviderType};
 use tauri::State;
 use tracing::{info, warn};
 
@@ -1081,7 +1081,7 @@ pub async fn move_to_folder(
             }
         }
         ProviderType::Gmail => {
-            if is_local_move && target_folder.role != Some(pebble_core::FolderRole::Spam) {
+            if is_local_move && target_folder.role != Some(crate::core::FolderRole::Spam) {
                 RemoteMutationOutcome::LocalOnly
             } else {
                 let delta = gmail_move_label_delta(

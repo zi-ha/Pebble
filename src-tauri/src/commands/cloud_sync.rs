@@ -7,12 +7,12 @@ use crate::commands::kanban::{
     KANBAN_CONTEXT_NOTES_KEY,
 };
 use crate::commands::translate::{decrypt_config as decrypt_translate_config, encrypt_config};
-use crate::state::AppState;
-use pebble_core::PebbleError;
-use pebble_crypto::passphrase::{
+use crate::core::PebbleError;
+use crate::crypto::passphrase::{
     decrypt_with_passphrase, encrypt_with_passphrase, PassphraseEncryptedBlob,
 };
-use pebble_store::cloud_sync::{
+use crate::state::AppState;
+use crate::store::cloud_sync::{
     preview_backup, serialize_backup, BackupPreview, BackupSecretSummary, RestoredAuthData,
     RestoredPrivateData, RestoredSecureUserData, SettingsBackup, WebDavClient,
     SETTINGS_BACKUP_FILENAME,
@@ -184,12 +184,12 @@ fn prepare_restored_private_data(
     Ok(private_data)
 }
 
-fn provider_slug(provider: &pebble_core::ProviderType) -> &'static str {
+fn provider_slug(provider: &crate::core::ProviderType) -> &'static str {
     match provider {
-        pebble_core::ProviderType::Imap => "imap",
-        pebble_core::ProviderType::Pop3 => "pop3",
-        pebble_core::ProviderType::Gmail => "gmail",
-        pebble_core::ProviderType::Outlook => "outlook",
+        crate::core::ProviderType::Imap => "imap",
+        crate::core::ProviderType::Pop3 => "pop3",
+        crate::core::ProviderType::Gmail => "gmail",
+        crate::core::ProviderType::Outlook => "outlook",
     }
 }
 
@@ -356,8 +356,8 @@ pub fn load_auto_backup_config(
 }
 
 fn load_auto_backup_config_inner(
-    store: &pebble_store::Store,
-    crypto: &pebble_crypto::CryptoService,
+    store: &crate::store::Store,
+    crypto: &crate::crypto::CryptoService,
 ) -> std::result::Result<Option<AutoBackupConfig>, PebbleError> {
     let Some(json) = load_secure_user_data(crypto, store, AUTO_BACKUP_CONFIG_KEY)? else {
         return Ok(None);

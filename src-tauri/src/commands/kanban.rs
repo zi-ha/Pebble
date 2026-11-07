@@ -2,8 +2,8 @@ use crate::commands::encrypted_store::{
     encrypt_secure_user_data, load_secure_user_data, lock_secure_user_data_key,
     store_secure_user_data,
 };
+use crate::core::{now_timestamp, KanbanCard, KanbanColumn, PebbleError};
 use crate::state::AppState;
-use pebble_core::{now_timestamp, KanbanCard, KanbanColumn, PebbleError};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 use tauri::State;
@@ -183,9 +183,9 @@ async fn merge_kanban_context_notes_for_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pebble_crypto::CryptoService;
-    use pebble_search::TantivySearch;
-    use pebble_store::Store;
+    use crate::crypto::CryptoService;
+    use crate::search::TantivySearch;
+    use crate::store::Store;
     use std::sync::Arc;
 
     fn test_state() -> AppState {

@@ -1,5 +1,5 @@
+use crate::core::{new_id, now_timestamp, PebbleError, Rule};
 use crate::state::AppState;
-use pebble_core::{new_id, now_timestamp, PebbleError, Rule};
 use tauri::State;
 
 #[tauri::command]

@@ -1,7 +1,7 @@
-use crate::state::AppState;
-use pebble_core::{
+use crate::core::{
     traits::DraftProvider, DraftMessage, EmailAddress, FolderRole, PebbleError, ProviderType,
 };
+use crate::state::AppState;
 use tauri::State;
 use tracing::warn;
 
@@ -59,7 +59,7 @@ fn requires_remote_draft_delete(provider_type: Option<ProviderType>) -> bool {
 }
 
 fn resolve_draft_provenance(
-    store: &pebble_store::Store,
+    store: &crate::store::Store,
     account_id: &str,
     existing_draft_id: Option<&str>,
 ) -> std::result::Result<DraftProvenance, PebbleError> {
@@ -153,7 +153,7 @@ pub async fn save_draft(
         .get_account(&account_id)?
         .ok_or_else(|| PebbleError::Validation("Account not found".into()))?;
     let sender = account.sender_identity();
-    pebble_mail::sender::sender_mailbox(&sender)?;
+    crate::mail::sender::sender_mailbox(&sender)?;
     let draft = DraftMessage {
         from: Some(sender),
         id: provenance.remote_id.clone(),
@@ -295,7 +295,7 @@ fn save_draft_locally(
 ) -> std::result::Result<String, PebbleError> {
     let id = existing_local_id
         .map(ToOwned::to_owned)
-        .unwrap_or_else(pebble_core::new_id);
+        .unwrap_or_else(crate::core::new_id);
     let previous_local_paths: Vec<String> = state
         .store
         .list_attachments_by_message(&id)?
@@ -305,7 +305,7 @@ fn save_draft_locally(
     let attachment_records =
         stage_local_attachment_records(&state.attachments_dir, &id, &draft.attachment_paths)?;
 
-    let msg = pebble_core::Message {
+    let msg = crate::core::Message {
         id: id.clone(),
         account_id: account_id.to_string(),
         remote_id: remote_draft_id.unwrap_or_default().to_string(),
@@ -334,12 +334,12 @@ fn save_draft_locally(
         is_read: true,
         is_starred: false,
         is_draft: true,
-        date: pebble_core::now_timestamp(),
+        date: crate::core::now_timestamp(),
         remote_version: None,
         is_deleted: false,
         deleted_at: None,
-        created_at: pebble_core::now_timestamp(),
-        updated_at: pebble_core::now_timestamp(),
+        created_at: crate::core::now_timestamp(),
+        updated_at: crate::core::now_timestamp(),
     };
     // Attach the draft to the account's Drafts folder if one exists, so it
     // shows up in the Drafts view. Falls back to no-folder for accounts
@@ -402,10 +402,10 @@ pub async fn delete_draft(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pebble_core::{new_id, now_timestamp, Account, Message, ProviderType};
-    use pebble_crypto::CryptoService;
-    use pebble_search::TantivySearch;
-    use pebble_store::Store;
+    use crate::core::{new_id, now_timestamp, Account, Message, ProviderType};
+    use crate::crypto::CryptoService;
+    use crate::search::TantivySearch;
+    use crate::store::Store;
     use std::sync::Mutex;
 
     fn make_account(id: &str, email: &str, provider: ProviderType) -> Account {
@@ -565,7 +565,7 @@ mod tests {
         let draft = draft_message("Keep private draft");
         let remote = SuccessfulRemote::new("must-not-upload");
         let observed = remote.created_from.clone();
-        let identity = pebble_core::OAuthMailboxIdentity {
+        let identity = crate::core::OAuthMailboxIdentity {
             subject: "gmail:other".into(),
             email: "other@example.com".into(),
             display_name: None,

@@ -5,14 +5,14 @@ use super::network::{
 };
 use crate::account_colors::default_account_color;
 use crate::commands::encrypted_store::{load_account_auth_data, store_account_auth_data};
-use crate::state::{AppState, OAuthAccountLockRegistry};
-use pebble_core::{
+use crate::core::{
     new_id, now_timestamp, Account, HttpProxyConfig, OAuthTokens, PebbleError, ProviderType,
 };
-use pebble_crypto::CryptoService;
-use pebble_mail::gmail_sync::TokenRefresher;
-use pebble_oauth::{build_http_client, OAuthConfig, OAuthError, OAuthManager, OAuthNetworkConfig};
-use pebble_store::Store;
+use crate::crypto::CryptoService;
+use crate::mail::gmail_sync::TokenRefresher;
+use crate::oauth::{build_http_client, OAuthConfig, OAuthError, OAuthManager, OAuthNetworkConfig};
+use crate::state::{AppState, OAuthAccountLockRegistry};
+use crate::store::Store;
 use std::sync::Arc;
 use tauri::State;
 
@@ -115,7 +115,7 @@ fn resolve_oauth_identity(
 fn parse_mailbox_identity(
     provider: &str,
     profile: &serde_json::Value,
-) -> Result<pebble_core::OAuthMailboxIdentity, PebbleError> {
+) -> Result<crate::core::OAuthMailboxIdentity, PebbleError> {
     let subject = non_empty_json_string(profile, "id").ok_or_else(|| {
         PebbleError::Validation("The provider did not return a stable mailbox identity".into())
     })?;
@@ -139,12 +139,12 @@ fn parse_mailbox_identity(
         ));
     }
     let (_, parsed_name) = parse_userinfo(provider, profile)?;
-    let identity = pebble_core::OAuthMailboxIdentity {
+    let identity = crate::core::OAuthMailboxIdentity {
         subject: format!("{provider}:{subject}"),
         email: email.to_owned(),
         display_name: (!parsed_name.is_empty()).then_some(parsed_name),
     };
-    pebble_mail::sender::sender_mailbox(&pebble_core::EmailAddress {
+    crate::mail::sender::sender_mailbox(&crate::core::EmailAddress {
         name: identity.display_name.clone(),
         address: identity.email.clone(),
     })?;
@@ -154,7 +154,7 @@ fn parse_mailbox_identity(
 pub(crate) async fn fetch_mailbox_identity(
     provider: &str,
     auth: &ResolvedOAuthAuth,
-) -> Result<pebble_core::OAuthMailboxIdentity, PebbleError> {
+) -> Result<crate::core::OAuthMailboxIdentity, PebbleError> {
     let url = if provider == "outlook" {
         "https://graph.microsoft.com/v1.0/me?$select=id,mail,userPrincipalName,displayName"
     } else {
@@ -183,7 +183,7 @@ pub(crate) async fn fetch_mailbox_identity(
 pub struct OAuthIdentityPreview {
     pub account_id: String,
     pub previous_email: String,
-    pub identity: pebble_core::OAuthMailboxIdentity,
+    pub identity: crate::core::OAuthMailboxIdentity,
 }
 
 async fn inspect_oauth_identity(
@@ -808,7 +808,7 @@ pub async fn complete_oauth_flow(
     proxy_host: Option<String>,
     proxy_port: Option<u16>,
 ) -> std::result::Result<Account, PebbleError> {
-    pebble_store::accounts::validate_sync_range_days(sync_range_days)?;
+    crate::store::accounts::validate_sync_range_days(sync_range_days)?;
     if provider.eq_ignore_ascii_case("pop3") && sync_range_days.is_some() {
         return Err(PebbleError::Validation(
             "POP3 does not support a bounded sync range".into(),
@@ -826,7 +826,7 @@ pub async fn complete_oauth_flow(
 
     // Bind the redirect listener first so the OS assigns an available port.
     // The actual port is then used in the redirect URI sent to the provider.
-    let bound = pebble_oauth::redirect::bind_redirect_listener(config.redirect_port)
+    let bound = crate::oauth::redirect::bind_redirect_listener(config.redirect_port)
         .await
         .map_err(|e| PebbleError::OAuth(format!("Failed to bind redirect listener: {e}")))?;
     config.redirect_port = bound.port;
@@ -886,7 +886,7 @@ pub async fn complete_oauth_flow(
     if provider.eq_ignore_ascii_case("gmail") && !display_name.trim().is_empty() {
         final_name = display_name.trim().to_owned();
     }
-    pebble_mail::sender::sender_mailbox(&pebble_core::EmailAddress {
+    crate::mail::sender::sender_mailbox(&crate::core::EmailAddress {
         name: Some(final_name.clone()),
         address: final_email.clone(),
     })?;
@@ -896,7 +896,7 @@ pub async fn complete_oauth_flow(
     let existing_accounts = state.store.list_accounts()?;
     let account_color = Some(default_account_color(&existing_accounts, &final_email));
     let account = Account {
-        account_label: pebble_store::accounts::normalize_account_label(account_label.as_deref())?,
+        account_label: crate::store::accounts::normalize_account_label(account_label.as_deref())?,
         provider_display_name: identity.display_name.clone(),
         id: new_id(),
         email: final_email,
@@ -929,7 +929,7 @@ pub async fn complete_oauth_flow(
         state.store.update_sync_state(&account.id, |s| {
             s.provider = Some(slug);
             s.sync_range_days = sync_range_days;
-            s.sync_since = pebble_store::accounts::sync_range_cutoff(sync_range_days, now);
+            s.sync_since = crate::store::accounts::sync_range_cutoff(sync_range_days, now);
         })?;
         Ok(())
     })() {
@@ -1306,7 +1306,7 @@ MICROSOFT_CLIENT_SECRET='microsoft-secret'
             expires_at: Some(1),
             scopes: vec!["old-scope".to_string()],
             proxy_mode: AccountProxyMode::Custom,
-            proxy: Some(pebble_core::HttpProxyConfig {
+            proxy: Some(crate::core::HttpProxyConfig {
                 host: "127.0.0.1".to_string(),
                 port: 7890,
             }),
@@ -1327,7 +1327,7 @@ MICROSOFT_CLIENT_SECRET='microsoft-secret'
         assert_eq!(updated.proxy_mode, AccountProxyMode::Custom);
         assert_eq!(
             updated.proxy,
-            Some(pebble_core::HttpProxyConfig {
+            Some(crate::core::HttpProxyConfig {
                 host: "127.0.0.1".to_string(),
                 port: 7890,
             })
@@ -1369,7 +1369,7 @@ MICROSOFT_CLIENT_SECRET='microsoft-secret'
             proxy: None,
         };
 
-        let updated = stored.with_proxy(Some(pebble_core::HttpProxyConfig {
+        let updated = stored.with_proxy(Some(crate::core::HttpProxyConfig {
             host: "127.0.0.1".to_string(),
             port: 7890,
         }));
@@ -1381,7 +1381,7 @@ MICROSOFT_CLIENT_SECRET='microsoft-secret'
         assert_eq!(updated.proxy_mode, AccountProxyMode::Custom);
         assert_eq!(
             updated.proxy,
-            Some(pebble_core::HttpProxyConfig {
+            Some(crate::core::HttpProxyConfig {
                 host: "127.0.0.1".to_string(),
                 port: 7890,
             })

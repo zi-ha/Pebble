@@ -1,7 +1,7 @@
+use crate::core::traits::LabelProvider;
+use crate::core::{Message, PebbleError, ProviderType};
+use crate::mail::{ImapConfig, ImapProvider};
 use crate::state::AppState;
-use pebble_core::traits::LabelProvider;
-use pebble_core::{Message, PebbleError, ProviderType};
-use pebble_mail::{ImapConfig, ImapProvider};
 use serde_json::json;
 use tauri::State;
 

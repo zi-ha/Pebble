@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-pub use pebble_mail::SyncTrigger;
+pub use crate::mail::SyncTrigger;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]

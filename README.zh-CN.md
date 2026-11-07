@@ -200,8 +200,8 @@ Pebble 可以通过 OAuth 连接 Gmail 和 Outlook。IMAP 账户使用应用内�
 | `pnpm build:windows` | 构建 Windows NSIS 安装包。 |
 | `pnpm build:macos` | 构建未签名的 macOS `.app` 和 `.dmg` 包。 |
 | `pnpm build:linux` | 构建 Linux `.AppImage`、`.deb` 和 `.rpm` 包。 |
-| `cargo test -p pebble-mail` | 运行邮件模块测试。 |
-| `cargo check` | 检查 Rust 工作区。 |
+| `cargo test -p pebble mail::` | 运行邮件模块测试。 |
+| `cargo check` | 检查 Rust 代码。 |
 
 ## 项目结构
 
@@ -213,19 +213,20 @@ Pebble/
 |   |-- hooks/              React hooks 和查询工具
 |   |-- lib/                IPC API、i18n、通用工具
 |   `-- stores/             Zustand 状态管理
-|-- src-tauri/              Tauri 应用和 IPC 命令
-|-- crates/                 Rust 工作区
-|   |-- pebble-core/        共享类型和错误定义
-|   |-- pebble-store/       SQLite 持久化
-|   |-- pebble-mail/        邮件提供商和同步逻辑
-|   |-- pebble-search/      Tantivy 搜索索引
-|   |-- pebble-crypto/      凭据加密
-|   |-- pebble-oauth/       OAuth 2.0 和 PKCE
-|   |-- pebble-rules/       规则引擎
-|   |-- pebble-translate/   翻译提供商
-|   `-- pebble-privacy/     HTML 清理和追踪保护
+|-- src-tauri/              Tauri 应用
+|   `-- src/
+|       |-- commands/       暴露给前端的 IPC 命令
+|       |-- core/           共享类型和错误定义
+|       |-- store/          SQLite 持久化
+|       |-- mail/           邮件提供商和同步逻辑
+|       |-- search/         Tantivy 搜索索引
+|       |-- crypto/         凭据加密
+|       |-- oauth/          OAuth 2.0 和 PKCE
+|       |-- rules/          规则引擎
+|       |-- translate/      翻译提供商
+|       `-- privacy/        HTML 清理和追踪保护
 |-- tests/                  前端测试
-`-- site/                   静态项目站点和截图
+`-- docs/                   设计文档与计划
 ```
 
 ## 快捷键

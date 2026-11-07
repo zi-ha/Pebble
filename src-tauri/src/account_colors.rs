@@ -1,4 +1,4 @@
-use pebble_core::Account;
+use crate::core::Account;
 use std::collections::HashSet;
 
 const ACCOUNT_COLOR_PRESETS: [&str; 12] = [
@@ -37,7 +37,7 @@ pub(crate) fn default_account_color(existing_accounts: &[Account], seed: &str) -
 
 #[cfg(test)]
 mod tests {
-    use pebble_core::{now_timestamp, Account, ProviderType};
+    use crate::core::{now_timestamp, Account, ProviderType};
 
     fn account(id: &str, color: Option<&str>) -> Account {
         let now = now_timestamp();

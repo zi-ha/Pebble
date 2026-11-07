@@ -1,4 +1,4 @@
-use pebble_core::{Message, PebbleError, ThreadSummary};
+use crate::core::{Message, PebbleError, ThreadSummary};
 use tauri::State;
 
 use crate::state::AppState;

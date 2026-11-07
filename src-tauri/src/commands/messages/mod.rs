@@ -11,12 +11,12 @@ use crate::commands::network::{
     account_proxy_mode_from_auth_value, resolve_mail_proxy_from_mode, AccountProxyMode,
 };
 use crate::commands::oauth::ensure_account_oauth_auth;
+use crate::core::{FolderRole, Message, PebbleError};
+use crate::crypto::CryptoService;
+use crate::mail::{GmailProvider, ImapConfig, ImapProvider, OutlookProvider, Pop3Config};
+use crate::search::TantivySearch;
 use crate::state::AppState;
-use pebble_core::{FolderRole, Message, PebbleError};
-use pebble_crypto::CryptoService;
-use pebble_mail::{GmailProvider, ImapConfig, ImapProvider, OutlookProvider, Pop3Config};
-use pebble_search::TantivySearch;
-use pebble_store::Store;
+use crate::store::Store;
 use serde_json::json;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -359,7 +359,7 @@ pub(super) fn find_folder_by_role(
     state: &AppState,
     account_id: &str,
     role: FolderRole,
-) -> std::result::Result<pebble_core::Folder, PebbleError> {
+) -> std::result::Result<crate::core::Folder, PebbleError> {
     state
         .store
         .find_folder_by_role(account_id, role.clone())?
@@ -371,7 +371,7 @@ pub(super) fn find_message_folder(
     state: &AppState,
     message_id: &str,
     account_id: &str,
-) -> std::result::Result<pebble_core::Folder, PebbleError> {
+) -> std::result::Result<crate::core::Folder, PebbleError> {
     let folder_ids = state.store.get_message_folder_ids(message_id)?;
     if folder_ids.is_empty() {
         return Err(PebbleError::Internal(

@@ -1,8 +1,8 @@
-use crate::state::AppState;
-use pebble_core::{
+use crate::core::{
     Contact, ContactInput, ContactSuggestion, KnownContact, PebbleError, VcardImportResult,
 };
-use pebble_store::Store;
+use crate::state::AppState;
+use crate::store::Store;
 use std::sync::Arc;
 use tauri::State;
 
@@ -165,8 +165,8 @@ mod tests {
     use std::{sync::Arc, thread};
 
     use super::{run_store_blocking, save_contact_with_store};
-    use pebble_core::{ContactEmailInput, ContactEmailLabel, ContactInput, PebbleError};
-    use pebble_store::Store;
+    use crate::core::{ContactEmailInput, ContactEmailLabel, ContactInput, PebbleError};
+    use crate::store::Store;
 
     fn input(address: &str) -> ContactInput {
         ContactInput {

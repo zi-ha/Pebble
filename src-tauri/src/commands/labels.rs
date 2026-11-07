@@ -1,6 +1,6 @@
+use crate::core::PebbleError;
 use crate::state::AppState;
-use pebble_core::PebbleError;
-use pebble_store::labels::Label;
+use crate::store::labels::Label;
 use tauri::State;
 
 #[tauri::command]

@@ -1,5 +1,5 @@
+use crate::core::{Attachment, PebbleError};
 use crate::state::AppState;
-use pebble_core::{Attachment, PebbleError};
 use std::path::{Path, PathBuf};
 use tauri::{Emitter, State};
 
@@ -268,7 +268,7 @@ pub(crate) fn stage_local_attachment_records(
             .and_then(|value| value.to_str())
             .map(sanitize_stored_filename)
             .unwrap_or_else(|| "attachment".to_string());
-        let attachment_dir = message_dir.join(pebble_core::new_id());
+        let attachment_dir = message_dir.join(crate::core::new_id());
         if let Err(error) = std::fs::create_dir_all(&attachment_dir) {
             cleanup_staged_attachment_records(&records);
             return Err(PebbleError::Internal(format!(
@@ -291,7 +291,7 @@ pub(crate) fn stage_local_attachment_records(
             .unwrap_or(0);
 
         records.push(Attachment {
-            id: pebble_core::new_id(),
+            id: crate::core::new_id(),
             message_id: message_id.to_string(),
             filename,
             mime_type: "application/octet-stream".to_string(),
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn copy_attachment_file_safely_uses_unique_target_when_requested_name_exists() {
-        let unique = pebble_core::new_id();
+        let unique = crate::core::new_id();
         let base = std::env::temp_dir().join(format!("pebble-attachment-copy-{unique}"));
         std::fs::create_dir_all(&base).expect("test dir");
         let source = base.join("source.txt");
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn stage_local_attachment_records_copies_sources_into_message_attachment_dir() {
-        let unique = pebble_core::new_id();
+        let unique = crate::core::new_id();
         let base = std::env::temp_dir().join(format!("pebble-attachment-stage-{unique}"));
         let source_dir = base.join("source");
         let attachments_root = base.join("attachments");
@@ -476,7 +476,7 @@ mod tests {
 
     #[test]
     fn stage_local_attachment_records_keeps_duplicate_filenames_distinct() {
-        let unique = pebble_core::new_id();
+        let unique = crate::core::new_id();
         let base = std::env::temp_dir().join(format!("pebble-attachment-duplicates-{unique}"));
         let first_dir = base.join("first");
         let second_dir = base.join("second");
@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn stage_local_attachment_records_cleans_partial_copy_on_error() {
-        let unique = pebble_core::new_id();
+        let unique = crate::core::new_id();
         let base = std::env::temp_dir().join(format!("pebble-attachment-rollback-{unique}"));
         let source_dir = base.join("source");
         let attachments_root = base.join("attachments");

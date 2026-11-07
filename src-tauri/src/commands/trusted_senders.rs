@@ -1,5 +1,5 @@
+use crate::core::{now_timestamp, PebbleError, TrustType, TrustedSender};
 use crate::state::AppState;
-use pebble_core::{now_timestamp, PebbleError, TrustType, TrustedSender};
 use tauri::State;
 
 #[tauri::command]

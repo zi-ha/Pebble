@@ -6,12 +6,12 @@
 
 use crate::commands::notifications;
 use crate::commands::pending_mail_ops::queue_pending_mail_op;
+use crate::core::{FolderRole, PebbleError};
 use crate::events;
+use crate::rules::RuleEngine;
+use crate::search::TantivySearch;
 use crate::state::AppState;
-use pebble_core::{FolderRole, PebbleError};
-use pebble_rules::RuleEngine;
-use pebble_search::TantivySearch;
-use pebble_store::Store;
+use crate::store::Store;
 use serde_json::json;
 use std::collections::HashSet;
 use std::sync::atomic::Ordering;
@@ -81,7 +81,7 @@ pub fn do_reindex(store: &Store, search: &TantivySearch) -> std::result::Result<
 /// Receive newly stored messages from the sync worker and index them for search.
 /// Also emits `mail:new` events to notify the frontend, and applies rule engine actions.
 /// Batches messages and commits periodically for efficiency.
-fn new_mail_event_payload(stored: &pebble_mail::StoredMessage) -> serde_json::Value {
+fn new_mail_event_payload(stored: &crate::mail::StoredMessage) -> serde_json::Value {
     serde_json::json!({
         "account_id": stored.message.account_id,
         "message_id": stored.message.id,
@@ -95,8 +95,8 @@ fn new_mail_event_payload(stored: &pebble_mail::StoredMessage) -> serde_json::Va
 
 fn should_send_new_mail_notification(
     store: &Store,
-    stored: &pebble_mail::StoredMessage,
-) -> pebble_core::Result<bool> {
+    stored: &crate::mail::StoredMessage,
+) -> crate::core::Result<bool> {
     if !stored.notify || stored.message.is_deleted || stored.message.is_draft {
         return Ok(false);
     }
@@ -112,7 +112,7 @@ fn should_send_new_mail_notification(
     }))
 }
 
-fn new_mail_notification_body(stored: &pebble_mail::StoredMessage) -> String {
+fn new_mail_notification_body(stored: &crate::mail::StoredMessage) -> String {
     let sender = if stored.message.from_name.trim().is_empty() {
         stored.message.from_address.trim()
     } else {
@@ -286,7 +286,7 @@ fn show_windows_new_mail_notification(
 
 fn show_new_mail_notification(
     app: &tauri::AppHandle,
-    stored: &pebble_mail::StoredMessage,
+    stored: &crate::mail::StoredMessage,
 ) -> Result<(), String> {
     let body = new_mail_notification_body(stored);
 
@@ -325,7 +325,7 @@ fn show_new_mail_notification(
 fn maybe_send_new_mail_notification(
     app: &tauri::AppHandle,
     store: &Store,
-    stored: &pebble_mail::StoredMessage,
+    stored: &crate::mail::StoredMessage,
 ) {
     let notifications_enabled = app
         .try_state::<AppState>()
@@ -356,7 +356,7 @@ fn maybe_send_new_mail_notification(
 pub(crate) fn recover_pending_search_operations(
     store: &Store,
     search: &TantivySearch,
-) -> pebble_core::Result<usize> {
+) -> crate::core::Result<usize> {
     let pending = store.list_search_pending()?;
     let mut applied_ids = Vec::with_capacity(pending.len());
     for (message_id, operation) in pending {
@@ -397,7 +397,7 @@ pub(crate) fn recover_pending_search_operations(
 pub async fn index_new_messages(
     search: &Arc<TantivySearch>,
     store: &Arc<Store>,
-    rx: &mut mpsc::UnboundedReceiver<pebble_mail::StoredMessage>,
+    rx: &mut mpsc::UnboundedReceiver<crate::mail::StoredMessage>,
     app: Option<tauri::AppHandle>,
 ) {
     const COMMIT_BATCH_SIZE: u32 = 20;
@@ -555,15 +555,15 @@ fn commit_search_batch_and_clear_recovery(
     search: &TantivySearch,
     store: &Store,
     reconciliation_pending_ids: &mut Vec<String>,
-) -> pebble_core::Result<()> {
+) -> crate::core::Result<()> {
     finalize_recovery_markers_after_commit(store, reconciliation_pending_ids, || search.commit())
 }
 
 fn finalize_recovery_markers_after_commit(
     store: &Store,
     reconciliation_pending_ids: &mut Vec<String>,
-    commit: impl FnOnce() -> pebble_core::Result<()>,
-) -> pebble_core::Result<()> {
+    commit: impl FnOnce() -> crate::core::Result<()>,
+) -> crate::core::Result<()> {
     commit()?;
     if !reconciliation_pending_ids.is_empty() {
         store.clear_search_pending(reconciliation_pending_ids)?;
@@ -577,9 +577,9 @@ fn apply_rule_action(
     store: &Store,
     account_id: &str,
     message_id: &str,
-    action: &pebble_rules::types::RuleAction,
-) -> pebble_core::Result<()> {
-    use pebble_rules::types::RuleAction;
+    action: &crate::rules::types::RuleAction,
+) -> crate::core::Result<()> {
+    use crate::rules::types::RuleAction;
     match action {
         RuleAction::MarkRead => {
             if queue_remote_rule_action(store, account_id, message_id, action)? {
@@ -595,7 +595,7 @@ fn apply_rule_action(
                 return Ok(());
             }
             if let Some(archive_folder) =
-                store.find_folder_by_role(account_id, pebble_core::FolderRole::Archive)?
+                store.find_folder_by_role(account_id, crate::core::FolderRole::Archive)?
             {
                 store.move_message_to_folder(message_id, &archive_folder.id)?;
                 info!(
@@ -636,8 +636,8 @@ fn apply_rule_action(
             }
         }
         RuleAction::SetKanbanColumn(column) => {
-            let now = pebble_core::now_timestamp();
-            let card = pebble_core::KanbanCard {
+            let now = crate::core::now_timestamp();
+            let card = crate::core::KanbanCard {
                 message_id: message_id.to_string(),
                 column: column.clone(),
                 position: 0,
@@ -658,11 +658,11 @@ fn queue_remote_rule_action(
     store: &Store,
     account_id: &str,
     message_id: &str,
-    action: &pebble_rules::types::RuleAction,
-) -> pebble_core::Result<bool> {
+    action: &crate::rules::types::RuleAction,
+) -> crate::core::Result<bool> {
     use crate::commands::gmail_labels::gmail_move_label_delta;
-    use pebble_core::{FolderRole, ProviderType};
-    use pebble_rules::types::RuleAction;
+    use crate::core::{FolderRole, ProviderType};
+    use crate::rules::types::RuleAction;
 
     let Some(account) = store.get_account(account_id)? else {
         return Ok(false);
@@ -773,11 +773,11 @@ mod rule_writeback_tests {
         notification_open_payload, recover_pending_search_operations,
         should_send_new_mail_notification,
     };
-    use pebble_core::*;
-    use pebble_rules::types::RuleAction;
-    use pebble_search::TantivySearch;
-    use pebble_store::pending_ops::PendingMailOpStatus;
-    use pebble_store::Store;
+    use crate::core::*;
+    use crate::rules::types::RuleAction;
+    use crate::search::TantivySearch;
+    use crate::store::pending_ops::PendingMailOpStatus;
+    use crate::store::Store;
     use serde_json::Value;
 
     fn test_account() -> Account {
@@ -825,7 +825,7 @@ mod rule_writeback_tests {
             created_at: 1_700_000_000,
             updated_at: 1_700_000_000,
         };
-        let stored = pebble_mail::StoredMessage {
+        let stored = crate::mail::StoredMessage {
             message,
             folder_ids: vec!["folder-inbox".to_string()],
             notify: true,
@@ -958,7 +958,7 @@ mod rule_writeback_tests {
         let folder = test_folder(&account.id);
         store.insert_folder(&folder).unwrap();
         let message = test_message(&account.id);
-        let stored = pebble_mail::StoredMessage {
+        let stored = crate::mail::StoredMessage {
             message,
             folder_ids: vec![folder.id],
             notify: false,
@@ -976,7 +976,7 @@ mod rule_writeback_tests {
         let folder = test_folder(&account.id);
         store.insert_folder(&folder).unwrap();
         let message = test_message(&account.id);
-        let stored = pebble_mail::StoredMessage {
+        let stored = crate::mail::StoredMessage {
             message,
             folder_ids: vec![folder.id],
             notify: true,

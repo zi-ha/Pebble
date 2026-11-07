@@ -3,15 +3,15 @@ use crate::commands::oauth::{
     build_oauth_token_refresher, decode_oauth_account_tokens, gmail_oauth_config,
     outlook_oauth_config,
 };
+use crate::core::{PebbleError, ProviderType};
 use crate::events;
-use crate::realtime::{RealtimeMode, RealtimeStatusPayload, SyncTrigger};
-use crate::state::{AppState, SyncHandle};
-use pebble_core::{PebbleError, ProviderType};
-use pebble_mail::{
+use crate::mail::{
     GmailProvider, GmailSyncWorker, ImapMailProvider, OutlookProvider, OutlookSyncWorker,
     Pop3Provider, Pop3SyncWorker, SyncConfig, SyncRuntimeStatus, SyncWorker,
 };
-use pebble_store::Store;
+use crate::realtime::{RealtimeMode, RealtimeStatusPayload, SyncTrigger};
+use crate::state::{AppState, SyncHandle};
+use crate::store::Store;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -64,7 +64,7 @@ pub async fn update_account_sync_range(
     days: Option<u32>,
     poll_interval_secs: Option<u64>,
 ) -> std::result::Result<(), PebbleError> {
-    pebble_store::accounts::validate_sync_range_days(days)?;
+    crate::store::accounts::validate_sync_range_days(days)?;
     let account = state
         .store
         .get_account(&account_id)?
@@ -91,10 +91,10 @@ pub async fn update_account_sync_range(
 
     if current != days {
         stop_sync_and_await(&state, &account_id).await;
-        let now = pebble_core::now_timestamp();
+        let now = crate::core::now_timestamp();
         state.store.update_sync_state(&account_id, |sync_state| {
             sync_state.sync_range_days = days;
-            sync_state.sync_since = pebble_store::accounts::sync_range_cutoff(days, now);
+            sync_state.sync_since = crate::store::accounts::sync_range_cutoff(days, now);
         })?;
     }
 
@@ -322,7 +322,7 @@ fn manual_realtime_status_payload(
     )
 }
 
-fn realtime_error_mode(sync_error: &pebble_mail::SyncError) -> RealtimeMode {
+fn realtime_error_mode(sync_error: &crate::mail::SyncError) -> RealtimeMode {
     let text = format!(
         "{} {}",
         sync_error.error_type.to_ascii_lowercase(),
@@ -435,14 +435,14 @@ fn build_sync_task(
     attachments_dir: std::path::PathBuf,
     stop_rx: watch::Receiver<bool>,
     trigger_rx: mpsc::UnboundedReceiver<SyncTrigger>,
-    error_tx: mpsc::UnboundedSender<pebble_mail::SyncError>,
-    progress_tx: mpsc::UnboundedSender<pebble_mail::SyncProgress>,
-    message_tx: mpsc::UnboundedSender<pebble_mail::StoredMessage>,
+    error_tx: mpsc::UnboundedSender<crate::mail::SyncError>,
+    progress_tx: mpsc::UnboundedSender<crate::mail::SyncProgress>,
+    message_tx: mpsc::UnboundedSender<crate::mail::StoredMessage>,
     app_for_progress: tauri::AppHandle,
     account_id_for_progress: String,
     account_id_clone: String,
     poll_interval_secs: Option<u64>,
-    account: pebble_core::Account,
+    account: crate::core::Account,
 ) -> std::result::Result<tokio::task::JoinHandle<()>, PebbleError> {
     let task = match account.provider {
         ProviderType::Gmail => {

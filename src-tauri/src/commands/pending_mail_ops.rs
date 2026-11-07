@@ -1,9 +1,9 @@
 use crate::commands::attachments::cleanup_staged_attachment_records;
+use crate::core::traits::{FolderProvider, LabelProvider};
+use crate::core::{FolderRole, Message, PebbleError, ProviderType};
+use crate::store::pending_ops::{PendingMailOp, PendingMailOpsSummary};
+use crate::store::Store;
 use crate::{events, state::AppState};
-use pebble_core::traits::{FolderProvider, LabelProvider};
-use pebble_core::{FolderRole, Message, PebbleError, ProviderType};
-use pebble_store::pending_ops::{PendingMailOp, PendingMailOpsSummary};
-use pebble_store::Store;
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{Emitter, Manager, State};
@@ -316,7 +316,7 @@ async fn replay_pending_mail_op(
 async fn replay_remote_update_flags(
     state: &AppState,
     provider_type: ProviderType,
-    message: &pebble_core::Message,
+    message: &crate::core::Message,
     payload: &Value,
     is_read: Option<bool>,
     is_starred: Option<bool>,
@@ -393,7 +393,7 @@ async fn replay_remote_update_flags(
 async fn replay_remote_archive(
     state: &AppState,
     provider_type: ProviderType,
-    message: &pebble_core::Message,
+    message: &crate::core::Message,
     payload: &Value,
 ) -> std::result::Result<(), PebbleError> {
     match provider_type {
@@ -441,7 +441,7 @@ async fn replay_remote_archive(
 async fn replay_remote_restore(
     state: &AppState,
     provider_type: ProviderType,
-    message: &pebble_core::Message,
+    message: &crate::core::Message,
     payload: &Value,
 ) -> std::result::Result<(), PebbleError> {
     match provider_type {
@@ -500,7 +500,7 @@ async fn replay_remote_restore(
 async fn replay_remote_delete(
     state: &AppState,
     provider_type: ProviderType,
-    message: &pebble_core::Message,
+    message: &crate::core::Message,
     payload: &Value,
     permanent: bool,
 ) -> std::result::Result<(), PebbleError> {
@@ -568,7 +568,7 @@ async fn replay_remote_delete(
 async fn replay_remote_move_to_folder(
     state: &AppState,
     provider_type: ProviderType,
-    message: &pebble_core::Message,
+    message: &crate::core::Message,
     payload: &Value,
 ) -> std::result::Result<(), PebbleError> {
     match provider_type {
@@ -620,8 +620,8 @@ async fn replay_remote_move_to_folder(
 async fn replay_remote_send(
     state: &AppState,
     _provider_type: ProviderType,
-    account: &pebble_core::Account,
-    message: &pebble_core::Message,
+    account: &crate::core::Account,
+    message: &crate::core::Message,
 ) -> std::result::Result<(), ReplayPendingMailOpError> {
     let attachment_paths = state
         .store
@@ -630,7 +630,7 @@ async fn replay_remote_send(
         .filter_map(|attachment| attachment.local_path)
         .collect::<Vec<_>>();
     let outgoing = compose::outgoing_message_from_stored(message, attachment_paths);
-    pebble_mail::sender::sender_mailbox(&outgoing.from)
+    crate::mail::sender::sender_mailbox(&outgoing.from)
         .map_err(ReplayPendingMailOpError::SenderIdentityBlocked)?;
     // Preparation errors are pre-dispatch and must never become outcome-unknown.
     let (transport, verified_from) = compose::prepare_send_transport(state, account)
@@ -646,8 +646,8 @@ async fn replay_remote_send(
 }
 
 async fn replay_prepared_send<F, Fut>(
-    outgoing: &pebble_core::traits::OutgoingMessage,
-    verified_from: &pebble_core::EmailAddress,
+    outgoing: &crate::core::traits::OutgoingMessage,
+    verified_from: &crate::core::EmailAddress,
     send: F,
 ) -> std::result::Result<(), ReplayPendingMailOpError>
 where
@@ -820,7 +820,7 @@ fn string_array(payload: &Value, key: &str) -> Option<Vec<String>> {
 
 fn source_folder_remote_id(
     state: &AppState,
-    message: &pebble_core::Message,
+    message: &crate::core::Message,
     payload: &Value,
 ) -> std::result::Result<String, PebbleError> {
     string_field(payload, "source_folder_remote_id")
@@ -834,7 +834,7 @@ fn source_folder_remote_id(
 
 fn target_folder_remote_id(
     state: &AppState,
-    message: &pebble_core::Message,
+    message: &crate::core::Message,
     payload: &Value,
     fallback_role: FolderRole,
 ) -> std::result::Result<String, PebbleError> {
@@ -862,7 +862,7 @@ fn target_folder_remote_id(
         .ok_or_else(|| PebbleError::Internal("No target folder for pending op".to_string()))
 }
 
-fn parse_uid(message: &pebble_core::Message) -> std::result::Result<u32, PebbleError> {
+fn parse_uid(message: &crate::core::Message) -> std::result::Result<u32, PebbleError> {
     message
         .remote_id
         .parse::<u32>()
@@ -877,8 +877,8 @@ mod tests {
     };
     use crate::commands::compose;
     use crate::commands::messages::classify_remote_delete_result;
-    use pebble_core::*;
-    use pebble_store::Store;
+    use crate::core::*;
+    use crate::store::Store;
 
     #[tokio::test]
     async fn queued_send_stops_before_dispatch_after_mailbox_address_changes() {

@@ -1,16 +1,5 @@
 [workspace]
-members = [
-    "src-tauri",
-    "crates/pebble-core",
-    "crates/pebble-store",
-    "crates/pebble-privacy",
-    "crates/pebble-mail",
-    "crates/pebble-search",
-    "crates/pebble-rules",
-    "crates/pebble-translate",
-    "crates/pebble-crypto",
-    "crates/pebble-oauth",
-]
+members = ["src-tauri"]
 resolver = "2"
 
 [workspace.dependencies]

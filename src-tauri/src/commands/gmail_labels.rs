@@ -1,4 +1,4 @@
-use pebble_core::FolderRole;
+use crate::core::FolderRole;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct GmailLabelDelta {

@@ -1,5 +1,5 @@
+use crate::core::PebbleError;
 use crate::state::AppState;
-use pebble_core::PebbleError;
 use serde::Serialize;
 use std::sync::atomic::Ordering;
 use tauri::image::Image;

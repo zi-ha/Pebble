@@ -3,7 +3,7 @@ use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use pebble_store::Store;
+use crate::store::Store;
 use tauri::{Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
 use tracing::{debug, error, info, warn};
@@ -35,7 +35,7 @@ pub async fn run_snooze_watcher(
 
         tokio::time::sleep(interval).await;
 
-        let now = pebble_core::now_timestamp();
+        let now = crate::core::now_timestamp();
 
         // Run SQLite operations in spawn_blocking to avoid blocking the Tokio runtime
         let store_clone = store.clone();
@@ -52,7 +52,7 @@ pub async fn run_snooze_watcher(
                         tokio::task::spawn_blocking(move || store_clone.unsnooze_message(&msg_id))
                             .await
                             .unwrap_or_else(|e| {
-                                Err(pebble_core::PebbleError::Internal(e.to_string()))
+                                Err(crate::core::PebbleError::Internal(e.to_string()))
                             })
                     {
                         error!("Failed to unsnooze message {}: {e}", snoozed.message_id);

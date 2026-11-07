@@ -1,9 +1,9 @@
 use crate::commands::encrypted_store::{load_secure_user_data, store_secure_user_data};
+use crate::core::{HttpProxyConfig, PebbleError};
+use crate::crypto::CryptoService;
+use crate::mail::ProxyConfig;
 use crate::state::AppState;
-use pebble_core::{HttpProxyConfig, PebbleError};
-use pebble_crypto::CryptoService;
-use pebble_mail::ProxyConfig;
-use pebble_store::Store;
+use crate::store::Store;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tauri::State;
 
@@ -212,7 +212,7 @@ pub async fn update_global_proxy(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pebble_core::HttpProxyConfig;
+    use crate::core::HttpProxyConfig;
 
     #[test]
     fn global_proxy_from_parts_rejects_partial_config() {

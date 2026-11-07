@@ -8,6 +8,7 @@ name = "pebble_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
+# Shell and plumbing
 tauri = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -16,20 +17,64 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
 tokio = { workspace = true }
 opener = "0.7"
-pebble-core = { path = "../crates/pebble-core" }
-pebble-store = { path = "../crates/pebble-store" }
-pebble-privacy = { path = "../crates/pebble-privacy" }
-pebble-mail = { path = "../crates/pebble-mail" }
-pebble-search = { path = "../crates/pebble-search" }
-pebble-rules = { path = "../crates/pebble-rules" }
-pebble-translate = { path = "../crates/pebble-translate" }
-pebble-crypto = { path = "../crates/pebble-crypto" }
-pebble-oauth = { path = "../crates/pebble-oauth" }
-tauri-plugin-notification = "2"
-tauri-plugin-deep-link = "2"
+semver = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+async-trait = "0.1"
+futures = "0.3"
+
+# Storage
+rusqlite = { workspace = true }
+r2d2 = "0.8"
+r2d2_sqlite = "0.33"
+
+# Mail protocols
+async-imap = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls = { workspace = true }
+webpki-roots = { workspace = true }
+mail-parser = { workspace = true }
+native-tls = { workspace = true }
+tokio-native-tls = { workspace = true }
+utf7-imap = "0.3"
 lettre = { workspace = true }
 reqwest = { workspace = true }
-semver = { workspace = true }
+tokio-socks = { workspace = true }
+
+# OAuth
+oauth2 = "5"
+url = "2"
+
+# Search indexing
+tantivy = { workspace = true }
+
+# Privacy / HTML sanitising
+ammonia = { workspace = true }
+lol_html = { workspace = true }
+htmlescape = "0.3"
+
+# Crypto
+aes-gcm = { workspace = true }
+rand = { workspace = true }
+hex = { workspace = true }
+keyring = { workspace = true }
+ring = "0.17.14"
+zeroize = { version = "1", features = ["zeroize_derive"] }
+
+# Translation providers
+base64 = "0.22"
+percent-encoding = "2"
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+md-5 = "0.10"
+
+# Tauri plugins
+tauri-plugin-notification = "2"
+tauri-plugin-deep-link = "2"
+
+[dev-dependencies]
+tempfile = "3"
 
 [target.'cfg(windows)'.dependencies]
 tauri-winrt-notification = "0.7"

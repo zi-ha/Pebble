@@ -2,10 +2,10 @@ use super::messages::provider_dispatch::{parse_imap_uid, ConnectedProvider};
 use super::messages::{
     find_folder_by_role, find_message_folder, imap_move_tracked, refresh_search_documents,
 };
+use crate::core::traits::{FolderProvider, LabelProvider};
+use crate::core::{FolderRole, Message, PebbleError, ProviderType};
 use crate::state::AppState;
-use pebble_core::traits::{FolderProvider, LabelProvider};
-use pebble_core::{FolderRole, Message, PebbleError, ProviderType};
-use pebble_store::Store;
+use crate::store::Store;
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use tauri::State;
@@ -820,7 +820,7 @@ pub async fn batch_star(
 #[cfg(test)]
 mod tests {
     use super::{batch_local_commit_ids, record_remote_success_after_remote_id_update};
-    use pebble_core::PebbleError;
+    use crate::core::PebbleError;
 
     #[test]
     fn batch_local_commit_ids_include_remote_successes_and_queued_connection_failures_in_request_order(

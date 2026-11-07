@@ -1,6 +1,6 @@
+use crate::core::{new_id, Folder, FolderRole, FolderType, PebbleError, ProviderType};
+use crate::mail::should_hide_outlook_folder;
 use crate::state::AppState;
-use pebble_core::{new_id, Folder, FolderRole, FolderType, PebbleError, ProviderType};
-use pebble_mail::should_hide_outlook_folder;
 use serde::Serialize;
 use std::collections::HashSet;
 use tauri::State;
@@ -301,7 +301,7 @@ mod tests {
 
         let inbox = folder(FolderRole::Inbox, "inbox-id");
         let filtered = filter_display_folders(
-            Some(&pebble_core::ProviderType::Outlook),
+            Some(&crate::core::ProviderType::Outlook),
             vec![
                 conversation_history,
                 remote_outbox,

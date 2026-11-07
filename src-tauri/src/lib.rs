@@ -1,10 +1,19 @@
 mod account_colors;
 mod commands;
+pub mod core;
+pub mod crypto;
 mod events;
+pub mod mail;
+pub mod oauth;
+pub mod privacy;
 mod profile;
 mod realtime;
+pub mod rules;
+pub mod search;
 mod snooze_watcher;
 mod state;
+pub mod store;
+pub mod translate;
 
 use serde::Serialize;
 use state::AppState;
@@ -340,7 +349,7 @@ pub fn run() {
             let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
             let env_filter =
                 tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                    "pebble=info,pebble_store=info,pebble_mail=info,pebble_search=info,pebble_translate=info,pebble_crypto=info,pebble_oauth=info".into()
+                    "pebble=info,pebble_lib=info".into()
                 });
             let stdout_layer = tracing_subscriber::fmt::layer().with_writer(std::io::stdout);
             let file_layer = tracing_subscriber::fmt::layer()
@@ -377,7 +386,7 @@ pub fn run() {
             tracing::info!("Database path: {}", db_path.display());
             log_startup_phase(startup_start, &mut startup_phase, "app data paths resolved");
 
-            let store = pebble_store::Store::open(&db_path)?;
+            let store = crate::store::Store::open(&db_path)?;
             tracing::info!("Database initialized successfully");
             log_startup_phase(
                 startup_start,
@@ -394,7 +403,7 @@ pub fn run() {
 
             let index_path = get_index_path(&app_data)?;
             tracing::info!("Search index path: {}", index_path.display());
-            let search = pebble_search::TantivySearch::open(&index_path)?;
+            let search = crate::search::TantivySearch::open(&index_path)?;
             let search_needs_reindex = search.needs_reindex();
             tracing::info!("Search index initialized successfully");
             log_startup_phase(startup_start, &mut startup_phase, "search index opened");
@@ -404,7 +413,7 @@ pub fn run() {
             // runs inside the background reindex task below, so startup can
             // proceed without waiting on a full-table scan.
 
-            let crypto = pebble_crypto::CryptoService::init()?;
+            let crypto = crate::crypto::CryptoService::init()?;
             tracing::info!("Crypto service initialized successfully");
             log_startup_phase(startup_start, &mut startup_phase, "crypto service initialized");
 

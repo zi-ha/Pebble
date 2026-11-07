@@ -7,16 +7,16 @@ use crate::commands::encrypted_store::load_account_auth_data;
 use crate::commands::messages::refresh_search_document;
 use crate::commands::network::{account_proxy_mode_from_auth_value, resolve_mail_proxy_from_mode};
 use crate::commands::oauth::ensure_account_oauth_auth;
-use crate::{events, state::AppState};
-use pebble_core::traits::{MailTransport, OutgoingMessage};
-use pebble_core::{
+use crate::core::traits::{MailTransport, OutgoingMessage};
+use crate::core::{
     new_id, now_timestamp, Account, EmailAddress, Folder, FolderRole, FolderType, Message,
     PebbleError, ProviderType,
 };
-use pebble_crypto::CryptoService;
-use pebble_mail::{smtp::SmtpSender, SmtpConfig};
-use pebble_mail::{GmailProvider, OutlookProvider};
-use pebble_store::Store;
+use crate::crypto::CryptoService;
+use crate::mail::{smtp::SmtpSender, SmtpConfig};
+use crate::mail::{GmailProvider, OutlookProvider};
+use crate::store::Store;
+use crate::{events, state::AppState};
 use tauri::{Emitter, State};
 use tracing::warn;
 
@@ -150,7 +150,7 @@ fn stage_outgoing_message(
     outgoing: &OutgoingMessage,
     state: LocalOutgoingState,
     attachments_dir: &Path,
-) -> std::result::Result<(Message, Vec<pebble_core::Attachment>), PebbleError> {
+) -> std::result::Result<(Message, Vec<crate::core::Attachment>), PebbleError> {
     let now = now_timestamp();
     let id = new_id();
     let prefix = match state {
@@ -287,7 +287,7 @@ pub(super) fn send_outcome_unknown_message(error: &PebbleError) -> String {
 
 struct PreparedOutgoingSend {
     message: Message,
-    attachments: Vec<pebble_core::Attachment>,
+    attachments: Vec<crate::core::Attachment>,
     op_id: String,
     sent_folder_id: Option<String>,
     delete_placeholder_after_send: bool,
@@ -415,7 +415,7 @@ pub(crate) async fn prepare_send_transport(
     account: &Account,
 ) -> std::result::Result<(PreparedSendTransport, EmailAddress), PebbleError> {
     let mut from = account.sender_identity();
-    pebble_mail::sender::sender_mailbox(&from)?;
+    crate::mail::sender::sender_mailbox(&from)?;
     match account.provider {
         ProviderType::Gmail => {
             let auth = ensure_account_oauth_auth(state, &account.id, "gmail").await?;
@@ -632,10 +632,10 @@ mod tests {
         assert_eq!(stored.from_name, "Sender");
     }
     use crate::commands::messages::refresh_search_document_with_store;
-    use pebble_core::{now_timestamp, Account, FolderRole};
-    use pebble_search::TantivySearch;
-    use pebble_store::pending_ops::{PendingMailOpStatus, MAX_PENDING_MAIL_OP_ATTEMPTS};
-    use pebble_store::Store;
+    use crate::core::{now_timestamp, Account, FolderRole};
+    use crate::search::TantivySearch;
+    use crate::store::pending_ops::{PendingMailOpStatus, MAX_PENDING_MAIL_OP_ATTEMPTS};
+    use crate::store::Store;
 
     fn test_account() -> Account {
         Account {
@@ -653,7 +653,7 @@ mod tests {
 
     fn outgoing_message() -> OutgoingMessage {
         OutgoingMessage {
-            from: pebble_core::EmailAddress {
+            from: crate::core::EmailAddress {
                 name: Some("Sender".into()),
                 address: "sender@example.com".into(),
             },
@@ -681,7 +681,7 @@ mod tests {
         attachments_dir: &Path,
     ) -> (
         Message,
-        Vec<pebble_core::Attachment>,
+        Vec<crate::core::Attachment>,
         String,
         Folder,
         Folder,
