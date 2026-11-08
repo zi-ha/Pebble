@@ -58,3 +58,14 @@ pub enum RuleAction {
     Archive,
     SetKanbanColumn(KanbanColumn),
 }
+
+impl RuleAction {
+    /// Actions that mean "the user does not want to be interrupted by this
+    /// message". Used to keep rules able to silence the new-mail popup.
+    pub fn silences_notifications(&self) -> bool {
+        matches!(
+            self,
+            RuleAction::MoveToFolder(_) | RuleAction::MarkRead | RuleAction::Archive
+        )
+    }
+}

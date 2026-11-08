@@ -44,6 +44,12 @@
     "hide": "隐藏窗口",
     "quit": "退出 Pebble"
   },
+  "notification": {
+    "unknownSender": "未知发件人",
+    "noSubject": "(无主题)",
+    "dismiss": "关闭这条通知",
+    "threadCount": "同一会话共 {{count}} 封新邮件"
+  },
   "sidebar": {
     "inbox": "收件箱",
     "sent": "已发送",
@@ -214,6 +220,8 @@
     "testNotificationSending": "正在发送测试通知...",
     "testNotificationSent": "测试通知已发送",
     "testNotificationFailed": "测试通知发送失败",
+    "testNotificationSubject": "新邮件会以这种方式提醒你",
+    "testNotificationBody": "点击卡片打开邮件，右上角可以关掉它。",
     "startupBehavior": "启动行为",
     "launchAtStartup": "开机时自动启动 Pebble",
     "autostartFailed": "更新开机自启动失败",

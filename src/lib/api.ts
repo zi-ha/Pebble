@@ -460,8 +460,14 @@ export async function getNotificationStatus(): Promise<NotificationStatus> {
   return invoke<NotificationStatus>("get_notification_status");
 }
 
-export async function showTestNotification(): Promise<void> {
-  return invoke<void>("show_test_notification");
+export async function showTestNotification(preview?: {
+  subject: string;
+  body: string;
+}): Promise<void> {
+  return invoke<void>("show_test_notification", {
+    subject: preview?.subject,
+    body: preview?.body,
+  });
 }
 
 export async function clearNotificationAttention(): Promise<void> {
@@ -836,4 +842,40 @@ export function previewOAuthIdentity(accountId: string): Promise<OAuthIdentityPr
 }
 export function applyOAuthIdentity(preview: OAuthIdentityPreview): Promise<Account> {
   return invoke("apply_oauth_identity", { preview });
+}
+
+// ─── New mail popup ─────────────────────────────────────────────────────────
+
+export interface NotificationCard {
+  id: string;
+  account_id: string;
+  thread_id: string;
+  message_id: string;
+  sender: string;
+  subject: string;
+  snippet: string;
+  received_at: number;
+  count: number;
+}
+
+/** Cards the popup window should currently show. */
+export function getNotificationCards(): Promise<NotificationCard[]> {
+  return invoke<NotificationCard[]>("get_notification_groups");
+}
+
+export function dismissNotification(id: string): Promise<void> {
+  return invoke<void>("dismiss_notification", { id });
+}
+
+export function dismissAllNotifications(): Promise<void> {
+  return invoke<void>("dismiss_all_notifications");
+}
+
+export function openNotificationMessage(accountId: string, messageId: string): Promise<void> {
+  return invoke<void>("open_notification_message", { accountId, messageId });
+}
+
+/** The popup measures its own content so cards are never clipped. */
+export function setNotificationPopupHeight(height: number): Promise<void> {
+  return invoke<void>("set_notification_popup_height", { height });
 }

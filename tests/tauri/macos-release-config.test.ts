@@ -41,8 +41,8 @@ describe("macOS release configuration", () => {
   });
 
   it("keeps desktop notification clicks routable to the target message", () => {
-    const indexingSource = readFileSync(
-      resolve(process.cwd(), "src-tauri", "src", "commands", "indexing.rs"),
+    const notificationSource = readFileSync(
+      resolve(process.cwd(), "src-tauri", "src", "commands", "notification_center.rs"),
       "utf8",
     ).replace(/\r\n/g, "\n");
     const eventsSource = readFileSync(resolve(process.cwd(), "src-tauri", "src", "events.rs"), "utf8").replace(
@@ -53,14 +53,14 @@ describe("macOS release configuration", () => {
 
     expect(eventsSource).toContain('pub const MAIL_NOTIFICATION_OPEN: &str = "mail:notification-open";');
     expect(eventsSource).not.toContain('#[cfg(windows)]\npub const MAIL_NOTIFICATION_OPEN');
-    expect(indexingSource).toContain("fn notification_open_payload");
-    expect(indexingSource).not.toContain("#[cfg(any(windows, test))]\nfn notification_open_payload");
-    expect(indexingSource).toContain("fn open_message_from_notification");
-    expect(indexingSource).not.toContain("#[cfg(windows)]\nfn open_message_from_notification");
-    expect(indexingSource).toContain("fn show_linux_new_mail_notification");
-    expect(indexingSource).toContain("wait_for_action");
-    expect(indexingSource).toContain("fn show_macos_new_mail_notification");
-    expect(indexingSource).toContain("wait_for_click(true)");
+    expect(notificationSource).toContain("fn open_payload");
+    expect(notificationSource).not.toContain("#[cfg(any(windows, test))]\nfn open_payload");
+    expect(notificationSource).toContain("fn open_message");
+    expect(notificationSource).not.toContain("#[cfg(windows)]\nfn open_message");
+    expect(notificationSource).toContain("fn show_linux_notification");
+    expect(notificationSource).toContain("wait_for_action");
+    expect(notificationSource).toContain("fn show_macos_notification");
+    expect(notificationSource).toContain("wait_for_click(true)");
     expect(cargoToml).toContain('[target.\'cfg(target_os = "linux")\'.dependencies]');
     expect(cargoToml).toContain('notify-rust = "4"');
     expect(cargoToml).toContain('[target.\'cfg(target_os = "macos")\'.dependencies]');

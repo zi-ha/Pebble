@@ -4,30 +4,17 @@
 //! Tantivy, and applies rule-engine actions. Split out of `sync_cmd.rs`
 //! so the sync lifecycle and the indexing pipeline can evolve independently.
 
-use crate::commands::notifications;
 use crate::commands::pending_mail_ops::queue_pending_mail_op;
-use crate::core::{FolderRole, PebbleError};
+use crate::core::PebbleError;
 use crate::events;
 use crate::rules::RuleEngine;
 use crate::search::TantivySearch;
-use crate::state::AppState;
 use crate::store::Store;
 use serde_json::json;
-use std::collections::HashSet;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
-
-#[cfg(any(
-    windows,
-    all(not(windows), not(target_os = "linux"), not(target_os = "macos"))
-))]
-use tauri_plugin_notification::NotificationExt;
-
-#[cfg(any(target_os = "linux", windows))]
-const NOTIFICATION_OPEN_ACTION: &str = "open";
 
 /// Rebuild the search index from all messages in the store.
 ///
@@ -91,263 +78,6 @@ fn new_mail_event_payload(stored: &crate::mail::StoredMessage) -> serde_json::Va
         "from": stored.message.from_address,
         "received_at": stored.message.date,
     })
-}
-
-fn should_send_new_mail_notification(
-    store: &Store,
-    stored: &crate::mail::StoredMessage,
-) -> crate::core::Result<bool> {
-    if !stored.notify || stored.message.is_deleted || stored.message.is_draft {
-        return Ok(false);
-    }
-
-    let folder_ids: HashSet<&str> = stored.folder_ids.iter().map(String::as_str).collect();
-    if folder_ids.is_empty() {
-        return Ok(false);
-    }
-
-    let folders = store.list_folders(&stored.message.account_id)?;
-    Ok(folders.iter().any(|folder| {
-        folder.role == Some(FolderRole::Inbox) && folder_ids.contains(folder.id.as_str())
-    }))
-}
-
-fn new_mail_notification_body(stored: &crate::mail::StoredMessage) -> String {
-    let sender = if stored.message.from_name.trim().is_empty() {
-        stored.message.from_address.trim()
-    } else {
-        stored.message.from_name.trim()
-    };
-    let subject = stored.message.subject.trim();
-
-    match (sender.is_empty(), subject.is_empty()) {
-        (true, true) => "New message".to_string(),
-        (true, false) => subject.to_string(),
-        (false, true) => sender.to_string(),
-        (false, false) => format!("{sender}: {subject}"),
-    }
-}
-
-fn notification_open_payload(account_id: &str, message_id: &str) -> serde_json::Value {
-    serde_json::json!({
-        "account_id": account_id,
-        "message_id": message_id,
-    })
-}
-
-#[cfg(any(target_os = "linux", windows))]
-fn is_notification_open_action(action: &str) -> bool {
-    matches!(action, "default" | NOTIFICATION_OPEN_ACTION)
-}
-
-fn open_message_from_notification(app: &tauri::AppHandle, account_id: &str, message_id: &str) {
-    notifications::clear_attention_indicator(app);
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.unminimize();
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
-    let _ = app.emit(
-        events::MAIL_NOTIFICATION_OPEN,
-        notification_open_payload(account_id, message_id),
-    );
-}
-
-#[cfg(any(
-    windows,
-    all(not(windows), not(target_os = "linux"), not(target_os = "macos"))
-))]
-fn show_default_new_mail_notification(app: &tauri::AppHandle, body: &str) -> Result<(), String> {
-    app.notification()
-        .builder()
-        .title("Pebble - New Mail")
-        .body(body)
-        .show()
-        .map_err(|e| e.to_string())
-}
-
-#[cfg(target_os = "linux")]
-fn show_linux_new_mail_notification(
-    app: &tauri::AppHandle,
-    body: &str,
-    account_id: &str,
-    message_id: &str,
-) -> Result<(), String> {
-    notifications::ensure_notification_environment(app)?;
-
-    let mut notification = notify_rust::Notification::new();
-    notification
-        .summary("Pebble - New Mail")
-        .body(body)
-        .appname("Pebble")
-        .auto_icon()
-        .action("default", "Open");
-
-    let handle = notification.show().map_err(|e| e.to_string())?;
-    let app_handle = app.clone();
-    let account_id = account_id.to_string();
-    let message_id = message_id.to_string();
-
-    std::thread::Builder::new()
-        .name("pebble-notification-open".to_string())
-        .spawn(move || {
-            handle.wait_for_action(|action| {
-                if is_notification_open_action(action) {
-                    open_message_from_notification(&app_handle, &account_id, &message_id);
-                }
-            });
-        })
-        .map(|_| ())
-        .map_err(|e| e.to_string())
-}
-
-#[cfg(target_os = "macos")]
-fn is_macos_notification_open_response(
-    response: &mac_notification_sys::NotificationResponse,
-) -> bool {
-    matches!(
-        response,
-        mac_notification_sys::NotificationResponse::Click
-            | mac_notification_sys::NotificationResponse::ActionButton(_)
-    )
-}
-
-#[cfg(target_os = "macos")]
-fn show_macos_new_mail_notification(
-    app: &tauri::AppHandle,
-    body: &str,
-    account_id: &str,
-    message_id: &str,
-) -> Result<(), String> {
-    notifications::ensure_notification_environment(app)?;
-
-    let app_handle = app.clone();
-    let account_id = account_id.to_string();
-    let message_id = message_id.to_string();
-    let body = body.to_string();
-    let app_id = if tauri::is_dev() {
-        "com.apple.Terminal".to_string()
-    } else {
-        app.config().identifier.clone()
-    };
-
-    std::thread::Builder::new()
-        .name("pebble-notification-open".to_string())
-        .spawn(move || {
-            let _ = mac_notification_sys::set_application(&app_id);
-            let mut notification = mac_notification_sys::Notification::new();
-            notification
-                .title("Pebble - New Mail")
-                .message(&body)
-                .main_button(mac_notification_sys::MainButton::SingleAction("Open"))
-                .wait_for_click(true);
-
-            match notification.send() {
-                Ok(response) if is_macos_notification_open_response(&response) => {
-                    open_message_from_notification(&app_handle, &account_id, &message_id);
-                }
-                Ok(_) => {}
-                Err(e) => warn!("Failed to show clickable macOS notification: {e}"),
-            }
-        })
-        .map(|_| ())
-        .map_err(|e| e.to_string())
-}
-
-#[cfg(windows)]
-fn show_windows_new_mail_notification(
-    app: &tauri::AppHandle,
-    body: &str,
-    account_id: &str,
-    message_id: &str,
-) -> Result<(), String> {
-    notifications::ensure_notification_environment(app)?;
-    let app_handle = app.clone();
-    let account_id = account_id.to_string();
-    let message_id = message_id.to_string();
-    tauri_winrt_notification::Toast::new(&notifications::windows_notification_app_id(app))
-        .title("Pebble - New Mail")
-        .text1(body)
-        .duration(tauri_winrt_notification::Duration::Short)
-        .add_button("Open", NOTIFICATION_OPEN_ACTION)
-        .on_activated(move |action| {
-            if action
-                .as_deref()
-                .map(is_notification_open_action)
-                .unwrap_or(true)
-            {
-                open_message_from_notification(&app_handle, &account_id, &message_id);
-            }
-            Ok(())
-        })
-        .show()
-        .map_err(|e| format!("{e:?}"))
-}
-
-fn show_new_mail_notification(
-    app: &tauri::AppHandle,
-    stored: &crate::mail::StoredMessage,
-) -> Result<(), String> {
-    let body = new_mail_notification_body(stored);
-
-    #[cfg(windows)]
-    {
-        match show_windows_new_mail_notification(
-            app,
-            &body,
-            &stored.message.account_id,
-            &stored.message.id,
-        ) {
-            Ok(()) => Ok(()),
-            Err(e) => {
-                warn!("Failed to show clickable Windows notification, falling back: {e}");
-                show_default_new_mail_notification(app, &body)
-            }
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        show_linux_new_mail_notification(app, &body, &stored.message.account_id, &stored.message.id)
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        show_macos_new_mail_notification(app, &body, &stored.message.account_id, &stored.message.id)
-    }
-
-    #[cfg(all(not(windows), not(target_os = "linux"), not(target_os = "macos")))]
-    {
-        show_default_new_mail_notification(app, &body)
-    }
-}
-
-fn maybe_send_new_mail_notification(
-    app: &tauri::AppHandle,
-    store: &Store,
-    stored: &crate::mail::StoredMessage,
-) {
-    let notifications_enabled = app
-        .try_state::<AppState>()
-        .is_some_and(|state| state.notifications_enabled.load(Ordering::SeqCst));
-
-    if !notifications_enabled {
-        return;
-    }
-
-    match should_send_new_mail_notification(store, stored) {
-        Ok(true) => {
-            if let Err(e) = show_new_mail_notification(app, stored) {
-                warn!("Failed to show new mail notification: {e}");
-            }
-            notifications::mark_attention_indicator(app);
-        }
-        Ok(false) => {}
-        Err(e) => warn!(
-            "Failed to evaluate new mail notification eligibility for message {}: {e}",
-            stored.message.id
-        ),
-    }
 }
 
 /// Replay crash-recovery search operations. Only operations that were applied
@@ -453,12 +183,18 @@ pub async fn index_new_messages(
         if !stored.reconciliation {
             if let Some(ref app) = app {
                 let _ = app.emit(events::MAIL_NEW, new_mail_event_payload(&stored));
-                maybe_send_new_mail_notification(app, store, &stored);
             }
 
+            // Rules run before the notification is queued: a rule that archives
+            // or marks the message read means the user asked not to be
+            // interrupted by it.
+            let mut silenced_by_rule = false;
             if let Some(ref engine) = engine {
                 let actions = engine.evaluate(&stored.message);
                 for action in actions {
+                    if action.silences_notifications() {
+                        silenced_by_rule = true;
+                    }
                     if let Err(e) = apply_rule_action(
                         store,
                         &stored.message.account_id,
@@ -467,6 +203,12 @@ pub async fn index_new_messages(
                     ) {
                         warn!("Rule action failed for message {}: {e}", stored.message.id);
                     }
+                }
+            }
+
+            if let Some(ref app) = app {
+                if !silenced_by_rule {
+                    crate::commands::notification_center::enqueue(app, store, &stored);
                 }
             }
         }
@@ -766,13 +508,13 @@ fn queue_remote_rule_action(
 
 #[cfg(test)]
 mod rule_writeback_tests {
-    #[cfg(any(target_os = "linux", windows))]
-    use super::is_notification_open_action;
     use super::{
         apply_rule_action, finalize_recovery_markers_after_commit, new_mail_event_payload,
-        notification_open_payload, recover_pending_search_operations,
-        should_send_new_mail_notification,
+        recover_pending_search_operations,
     };
+    #[cfg(any(target_os = "linux", windows))]
+    use crate::commands::notification_center::is_notification_open_action;
+    use crate::commands::notification_center::{open_payload, should_notify};
     use crate::core::*;
     use crate::rules::types::RuleAction;
     use crate::search::TantivySearch;
@@ -965,7 +707,7 @@ mod rule_writeback_tests {
             reconciliation: false,
         };
 
-        assert!(!should_send_new_mail_notification(&store, &stored).unwrap());
+        assert!(!should_notify(&store, &stored).unwrap());
     }
 
     #[test]
@@ -983,12 +725,12 @@ mod rule_writeback_tests {
             reconciliation: false,
         };
 
-        assert!(should_send_new_mail_notification(&store, &stored).unwrap());
+        assert!(should_notify(&store, &stored).unwrap());
     }
 
     #[test]
     fn notification_open_payload_identifies_clicked_message_account() {
-        let payload = notification_open_payload("account-2", "message-1");
+        let payload = open_payload("account-2", "message-1");
 
         assert_eq!(payload["account_id"], "account-2");
         assert_eq!(payload["message_id"], "message-1");

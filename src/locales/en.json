@@ -44,6 +44,12 @@
     "hide": "Hide Window",
     "quit": "Quit Pebble"
   },
+  "notification": {
+    "unknownSender": "Unknown sender",
+    "noSubject": "(no subject)",
+    "dismiss": "Dismiss this notification",
+    "threadCount": "{{count}} new messages in this conversation"
+  },
   "sidebar": {
     "inbox": "Inbox",
     "sent": "Sent",
@@ -214,6 +220,8 @@
     "testNotificationSending": "Sending test notification...",
     "testNotificationSent": "Test notification sent",
     "testNotificationFailed": "Failed to send test notification",
+    "testNotificationSubject": "New mail looks like this",
+    "testNotificationBody": "Click the card to open the message, or close it with the cross.",
     "startupBehavior": "Startup Behavior",
     "launchAtStartup": "Launch Pebble at system startup",
     "autostartFailed": "Failed to update launch at startup",

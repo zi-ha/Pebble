@@ -66,7 +66,10 @@ export default function GeneralTab() {
   const handleTestNotification = useCallback(async () => {
     setTestingNotification(true);
     try {
-      await showTestNotification();
+      await showTestNotification({
+        subject: t("settings.testNotificationSubject", "新邮件会以这种方式提醒你"),
+        body: t("settings.testNotificationBody", "点击卡片打开邮件，右上角可以关掉它。"),
+      });
       addToast({
         message: t("settings.testNotificationSent", "Test notification sent"),
         type: "success",

@@ -302,6 +302,9 @@ pub fn run() {
             match event {
                 WindowEvent::Focused(true) => {
                     commands::notifications::clear_attention_indicator(window.app_handle());
+                    // The user is looking at the app again; lingering popups
+                    // would only cover the mail they just came back for.
+                    commands::notification_center::dismiss_all(window.app_handle());
                 }
                 WindowEvent::CloseRequested { api, .. } => {
                     // Hard guard: hide to tray instead of exiting unless the
@@ -430,6 +433,7 @@ pub fn run() {
             let state: tauri::State<AppState> = app.state();
             let store_clone = state.store.clone();
             let app_handle = app.handle().clone();
+            commands::notification_center::install(&app_handle);
             let app_for_deep_link = app_handle.clone();
             app.listen(DEEP_LINK_NEW_URL_EVENT, move |event| {
                 let urls = mailto_urls_from_deep_link_payload(event.payload());
@@ -660,6 +664,11 @@ pub fn run() {
             commands::notifications::get_notification_status,
             commands::notifications::show_test_notification,
             commands::notifications::clear_notification_attention,
+            commands::notification_center::get_notification_groups,
+            commands::notification_center::dismiss_notification,
+            commands::notification_center::dismiss_all_notifications,
+            commands::notification_center::open_notification_message,
+            commands::notification_center::set_notification_popup_height,
             commands::pending_mail_ops::get_pending_mail_ops_summary,
             commands::pending_mail_ops::list_pending_mail_ops,
             commands::pending_mail_ops::dismiss_failed_pending_mail_ops,

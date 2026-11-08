@@ -30,6 +30,15 @@ pub struct AppState {
     pub attachments_dir: PathBuf,
     pub notifications_enabled: Arc<AtomicBool>,
     pub notification_attention_active: Arc<AtomicBool>,
+    /// Feeds the debounced notification collector; `None` until
+    /// `notification_center::install` runs during setup.
+    pub notification_tx: std::sync::Mutex<
+        Option<mpsc::UnboundedSender<crate::commands::notification_center::PendingNotification>>,
+    >,
+    /// What the popup window is currently showing, so a reloaded window can
+    /// restore it and dismissals can be applied to the same list.
+    pub notification_groups:
+        std::sync::Mutex<Vec<crate::commands::notification_center::NotificationGroup>>,
     pub keep_running_in_background: Arc<AtomicBool>,
 }
 
@@ -52,6 +61,8 @@ impl AppState {
             attachments_dir,
             notifications_enabled: Arc::new(AtomicBool::new(true)),
             notification_attention_active: Arc::new(AtomicBool::new(false)),
+            notification_tx: std::sync::Mutex::new(None),
+            notification_groups: std::sync::Mutex::new(Vec::new()),
             keep_running_in_background: Arc::new(AtomicBool::new(true)),
         }
     }

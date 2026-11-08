@@ -274,6 +274,8 @@ pub async fn get_notification_status(
 pub async fn show_test_notification(
     app: AppHandle,
     state: State<'_, AppState>,
+    subject: Option<String>,
+    body: Option<String>,
 ) -> std::result::Result<(), PebbleError> {
     if !state.notifications_enabled.load(Ordering::SeqCst) {
         return Err(PebbleError::Validation(
@@ -281,12 +283,24 @@ pub async fn show_test_notification(
         ));
     }
 
-    show_desktop_notification(
-        &app,
-        "Pebble - Test Notification",
-        "Desktop notifications are working.",
-    )
-    .map_err(PebbleError::Internal)
+    // Windows draws the popup itself now, so the preview goes through the same
+    // renderer a real message would. Other platforms keep the native toast.
+    #[cfg(windows)]
+    {
+        crate::commands::notification_center::show_test_card(&app, subject, body);
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = (subject, body);
+        show_desktop_notification(
+            &app,
+            "Pebble - Test Notification",
+            "Desktop notifications are working.",
+        )
+        .map_err(PebbleError::Internal)
+    }
 }
 
 #[tauri::command]

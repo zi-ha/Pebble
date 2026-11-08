@@ -6,6 +6,8 @@ pub const MAIL_FOLDER_CHANGED: &str = "mail:folder-changed";
 pub const MAIL_ERROR: &str = "mail:error";
 pub const MAIL_NEW: &str = "mail:new";
 pub const MAIL_NOTIFICATION_OPEN: &str = "mail:notification-open";
+/// Payload: the cards the custom popup should render.
+pub const MAIL_NOTIFICATION_GROUPS: &str = "mail:notification-groups";
 pub const MAIL_UNSNOOZED: &str = "mail:unsnoozed";
 pub const MAIL_PENDING_OPS_CHANGED: &str = "mail:pending-ops-changed";
 pub const APP_OPEN_MAILTO: &str = "app:open-mailto";
