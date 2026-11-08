@@ -155,12 +155,12 @@ pnpm dev
 ### 构建
 
 ```bash
-pnpm build
 pnpm build:windows
 pnpm build:macos
 pnpm build:linux
 ```
 
+按当前平台选对应的命令，没有平台无关的 `pnpm build`。
 桌面端构建产物会输出到 `target/release/` 和 `target/release/bundle/`。
 macOS 构建产物默认不签名，除非你自行配置签名流程。
 将未签名的 macOS 构建复制到 `/Applications` 后，请先执行下面的命令再打开应用：
@@ -196,7 +196,6 @@ Pebble 可以通过 OAuth 连接 Gmail 和 Outlook。IMAP 账户使用应用内�
 | `pnpm dev:frontend` | 只启动 Vite 前端开发服务。 |
 | `pnpm test` | 使用 Vitest 运行前端测试。 |
 | `pnpm build:frontend` | 类型检查并构建前端。 |
-| `pnpm build` | 为当前平台构建桌面应用。 |
 | `pnpm build:windows` | 构建 Windows NSIS 安装包。 |
 | `pnpm build:macos` | 构建未签名的 macOS `.app` 和 `.dmg` 包。 |
 | `pnpm build:linux` | 构建 Linux `.AppImage`、`.deb` 和 `.rpm` 包。 |

@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 describe("macOS release configuration", () => {
@@ -31,26 +30,14 @@ describe("macOS release configuration", () => {
     expect(packageJson.scripts["build:linux"]).toContain("--bundles appimage,deb,rpm");
   });
 
-  it("routes the generic build command to platform-specific bundles", async () => {
+  it("builds through the explicit per-platform scripts, not a wrapper", () => {
     const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
-    const buildScriptPath = resolve(process.cwd(), "scripts", "build-tauri.mjs");
-    const buildScriptSource = readFileSync(buildScriptPath, "utf8");
-    const buildScript = await import(pathToFileURL(buildScriptPath).href);
 
-    expect(packageJson.scripts.build).toBe("node scripts/build-tauri.mjs");
-    expect(buildScriptSource).not.toMatch(/^#!/);
-    expect(buildScript.bundleTargetsForPlatform("win32")).toBe("nsis");
-    expect(buildScript.bundleTargetsForPlatform("darwin")).toBe("app,dmg");
-    expect(buildScript.bundleTargetsForPlatform("linux")).toBe("appimage,deb,rpm");
-    expect(buildScript.tauriBuildEnvironmentForPlatform("linux", {})).toEqual({
-      NO_STRIP: "1",
-    });
-    expect(
-      buildScript.tauriBuildEnvironmentForPlatform("linux", {
-        NO_STRIP: "0",
-      }),
-    ).toEqual({ NO_STRIP: "0" });
-    expect(buildScript.tauriBuildEnvironmentForPlatform("win32", {})).toEqual({});
+    // `scripts/build-tauri.mjs` was removed: every build entry point is now an
+    // explicit `tauri build --bundles ...`, so the produced installer is obvious
+    // from the command itself instead of hidden behind a platform map.
+    expect(packageJson.scripts.build).toBeUndefined();
+    expect(existsSync(resolve(process.cwd(), "scripts"))).toBe(false);
   });
 
   it("keeps desktop notification clicks routable to the target message", () => {

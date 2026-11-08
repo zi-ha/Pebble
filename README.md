@@ -155,12 +155,12 @@ The development command starts the Vite frontend and the Tauri desktop app.
 ### Build
 
 ```bash
-pnpm build
 pnpm build:windows
 pnpm build:macos
 pnpm build:linux
 ```
 
+Pick the command that matches your platform; there is no platform-agnostic `pnpm build`.
 Desktop bundles are written under `target/release/` and `target/release/bundle/`.
 On Linux, install the Tauri system dependencies first; `pnpm build:linux` produces AppImage, deb, and rpm packages under `target/release/bundle/`.
 macOS bundles are unsigned unless you provide your own signing setup.
@@ -197,7 +197,6 @@ Copy `.env.example` to `.env`, then fill the provider values you need.
 | `pnpm dev:frontend` | Run only the Vite frontend dev server. |
 | `pnpm test` | Run frontend tests with Vitest. |
 | `pnpm build:frontend` | Type-check and build the frontend. |
-| `pnpm build` | Build the desktop app for the current platform. |
 | `pnpm build:windows` | Build the Windows NSIS installer. |
 | `pnpm build:macos` | Build unsigned macOS `.app` and `.dmg` bundles. |
 | `pnpm build:linux` | Build Linux `.AppImage`, `.deb`, and `.rpm` packages. |
