@@ -31,12 +31,11 @@ pub const DEBOUNCE_MS: u64 = 700;
 /// dropped: the tray indicator and the list already cover the rest.
 pub const MAX_CARDS: usize = 3;
 
-/// Popup geometry, in logical pixels.
+/// Popup geometry, in logical pixels. The window is docked flush against the
+/// bottom-right corner of the work area, so there is no margin on either edge.
 const POPUP_WIDTH: f64 = 384.0;
-const POPUP_MARGIN_RIGHT: f64 = 24.0;
-const POPUP_MARGIN_BOTTOM: f64 = 48.0;
-const POPUP_CARD_HEIGHT: f64 = 116.0;
-const POPUP_PADDING: f64 = 16.0;
+/// Roughly one card: padding + sender line + subject + two snippet lines.
+const POPUP_CARD_HEIGHT: f64 = 88.0;
 
 pub const WINDOW_LABEL: &str = "notification";
 
@@ -303,7 +302,7 @@ fn publish(app: &AppHandle, groups: Vec<NotificationGroup>) {
 }
 
 fn popup_height(cards: usize) -> f64 {
-    POPUP_PADDING * 2.0 + (cards.max(1) as f64) * POPUP_CARD_HEIGHT
+    (cards.max(1) as f64) * POPUP_CARD_HEIGHT
 }
 
 fn ensure_popup_window(app: &AppHandle) -> Result<tauri::WebviewWindow, String> {
@@ -343,10 +342,24 @@ fn place_bottom_right(window: &tauri::WebviewWindow, height: f64) {
         return;
     };
     let scale = monitor.scale_factor();
-    let monitor_size = monitor.size().to_logical::<f64>(scale);
-    let monitor_origin = monitor.position().to_logical::<f64>(scale);
-    let x = monitor_origin.x + monitor_size.width - POPUP_WIDTH - POPUP_MARGIN_RIGHT;
-    let y = monitor_origin.y + monitor_size.height - height - POPUP_MARGIN_BOTTOM;
+
+    // Dock to the work area rather than the raw monitor: a taskbar parked at
+    // the bottom would otherwise swallow the popup, and "flush with the corner"
+    // has to mean the corner the user can actually see.
+    let area = monitor.work_area();
+    let (corner_x, corner_y) = if area.size.width > 0 && area.size.height > 0 {
+        let origin = area.position.to_logical::<f64>(scale);
+        let size = area.size.to_logical::<f64>(scale);
+        (origin.x + size.width, origin.y + size.height)
+    } else {
+        let origin = monitor.position().to_logical::<f64>(scale);
+        let size = monitor.size().to_logical::<f64>(scale);
+        (origin.x + size.width, origin.y + size.height)
+    };
+
+    // No margin: the panel touches both edges of the corner.
+    let x = corner_x - POPUP_WIDTH;
+    let y = corner_y - height;
     let _ = window.set_position(tauri::LogicalPosition::new(x, y));
 }
 

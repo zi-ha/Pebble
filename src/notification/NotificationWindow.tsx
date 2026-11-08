@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
+import { deriveAccountColor } from "@/lib/accountColors";
 import {
   dismissAllNotifications,
   dismissNotification,
@@ -10,23 +11,39 @@ import {
   type NotificationCard,
 } from "@/lib/api";
 
-/** How long a card stays before it slides away on its own. */
+/** How long a card stays before it fades out on its own. */
 const AUTO_DISMISS_MS = 9000;
 
-const AVATAR_COLORS = ["#2563eb", "#0f766e", "#b45309", "#7c3aed", "#be123c", "#0369a1"];
-
-function avatarColor(accountId: string): string {
-  let hash = 0;
-  for (let i = 0; i < accountId.length; i += 1) {
-    hash = (hash * 31 + accountId.charCodeAt(i)) % 997;
+/**
+ * The popup is its own window, so it has to resolve the theme itself: the app
+ * store that normally sets `data-theme` lives in the main window. Preferences
+ * are stored under a profile-scoped key, and this window deliberately skips the
+ * namespace round-trip, so the scoped key is found by suffix.
+ */
+function storedTheme(): string | null {
+  try {
+    const direct = localStorage.getItem("pebble-theme");
+    if (direct) return direct;
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key && key.endsWith(":pebble-theme")) {
+        return localStorage.getItem(key);
+      }
+    }
+  } catch {
+    return null;
   }
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+  return null;
 }
 
-function initials(card: NotificationCard): string {
-  const source = card.sender.trim() || card.subject.trim();
-  return source ? source.slice(0, 1).toUpperCase() : "P";
+function applyStoredTheme() {
+  const stored = storedTheme();
+  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  const resolved = stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", resolved);
 }
+
+applyStoredTheme();
 
 function relativeTime(timestamp: number, now: number): string {
   const seconds = Math.max(0, Math.round(now / 1000 - timestamp));
@@ -37,139 +54,126 @@ function relativeTime(timestamp: number, now: number): string {
   return `${hours}h`;
 }
 
+// Docked panel: the window sits in the corner of the work area, so only the
+// top-left corner is rounded — the other three edges are the screen edge.
 const STYLES = `
   html, body, #root { background: transparent !important; margin: 0; overflow: hidden; }
   .pebble-notify-root {
     box-sizing: border-box;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 8px;
+    justify-content: flex-end;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   }
-  .pebble-notify-card {
+  .pebble-notify-panel {
     position: relative;
     box-sizing: border-box;
-    display: flex;
-    gap: 12px;
-    padding: 12px 14px 12px 12px;
-    background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 14px;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 1px 2px rgba(15, 23, 42, 0.06);
-    cursor: pointer;
-    text-align: left;
     width: 100%;
+    background: var(--color-main-bg);
+    border-top: 1px solid var(--color-border);
+    border-left: 1px solid var(--color-border);
+    border-radius: 12px 0 0 0;
     overflow: hidden;
-    transition: transform 120ms ease, box-shadow 120ms ease;
   }
-  .pebble-notify-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.22), 0 1px 2px rgba(15, 23, 42, 0.06);
+  .pebble-notify-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px 12px 11px 13px;
+    background: var(--color-main-bg);
+    cursor: pointer;
+    outline: none;
+    transition: background-color 110ms ease;
   }
-  .pebble-notify-card:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
-  }
-  .pebble-notify-avatar {
+  .pebble-notify-item + .pebble-notify-item { border-top: 1px solid var(--color-border); }
+  .pebble-notify-item:hover { background: var(--color-bg-hover); }
+  .pebble-notify-item:active { background: var(--color-bg-secondary); }
+  .pebble-notify-content { flex: 1 1 auto; min-width: 0; }
+  .pebble-notify-head { display: flex; align-items: center; gap: 6px; }
+  .pebble-notify-dot {
     flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-  .pebble-notify-body { flex: 1 1 auto; min-width: 0; }
-  .pebble-notify-head {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
   }
   .pebble-notify-sender {
     flex: 1 1 auto;
     min-width: 0;
-    font-size: 13.5px;
+    font-size: 12.5px;
     font-weight: 600;
-    color: #0f172a;
+    color: var(--color-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .pebble-notify-time {
+  .pebble-notify-count {
     flex: 0 0 auto;
-    font-size: 11.5px;
-    color: #94a3b8;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 15px;
     font-variant-numeric: tabular-nums;
   }
+  .pebble-notify-time {
+    flex: 0 0 auto;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pebble-notify-close {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: -3px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 110ms ease, background-color 110ms ease;
+  }
+  .pebble-notify-item:hover .pebble-notify-close,
+  .pebble-notify-close:focus-visible { opacity: 1; }
+  .pebble-notify-close:hover { background: var(--color-bg-secondary); color: var(--color-text-primary); }
   .pebble-notify-subject {
-    font-size: 13px;
+    margin-top: 1px;
+    font-size: 12.5px;
     font-weight: 500;
-    color: #1e293b;
     line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
+    color: var(--color-text-primary);
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
   }
   .pebble-notify-snippet {
-    margin-top: 3px;
-    font-size: 12px;
-    color: #64748b;
+    margin-top: 2px;
+    font-size: 11.5px;
     line-height: 1.4;
+    color: var(--color-text-secondary);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .pebble-notify-count {
-    flex: 0 0 auto;
-    align-self: flex-start;
-    margin-left: 6px;
-    padding: 1px 7px;
-    border-radius: 999px;
-    background: #eff6ff;
-    color: #1d4ed8;
-    font-size: 11px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-  .pebble-notify-close {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: #94a3b8;
-    font-size: 15px;
-    line-height: 1;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 120ms ease, background 120ms ease;
-  }
-  .pebble-notify-card:hover .pebble-notify-close,
-  .pebble-notify-close:focus-visible { opacity: 1; }
-  .pebble-notify-close:hover { background: rgba(15, 23, 42, 0.06); color: #334155; }
   .pebble-notify-progress {
     position: absolute;
     left: 0;
     bottom: 0;
-    height: 2px;
     width: 100%;
-    background: currentColor;
+    height: 2px;
+    background: var(--color-accent);
+    opacity: 0.5;
     transform-origin: left center;
-    color: #2563eb;
   }
   @media (prefers-reduced-motion: no-preference) {
     .pebble-notify-progress { animation: pebble-notify-drain var(--pebble-dismiss, 9s) linear forwards; }
@@ -186,7 +190,7 @@ export default function NotificationWindow() {
   const [cards, setCards] = useState<NotificationCard[]>([]);
   const [paused, setPaused] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const lastHeight = useRef(0);
   const timers = useRef<number[]>([]);
 
@@ -234,11 +238,13 @@ export default function NotificationWindow() {
     void openNotificationMessage(card.account_id, card.message_id);
   }, []);
 
-  // Resize the window to whatever the cards actually need.
-  useEffect(() => {
-    const element = rootRef.current;
+  // Resize the window to whatever the panel actually needs. The panel is
+  // bottom-aligned, so being a pixel off never leaves a gap at the corner.
+  // Layout effect so the first painted frame is already the right size.
+  useLayoutEffect(() => {
+    const element = panelRef.current;
     if (!element) return;
-    const height = Math.ceil(element.getBoundingClientRect().height) + 16;
+    const height = Math.ceil(element.getBoundingClientRect().height) + 1;
     if (Math.abs(height - lastHeight.current) < 1) return;
     lastHeight.current = height;
     void setNotificationPopupHeight(height);
@@ -275,7 +281,7 @@ export default function NotificationWindow() {
         return (
           <div
             key={card.id}
-            className="pebble-notify-card"
+            className="pebble-notify-item"
             role="button"
             tabIndex={0}
             aria-label={`${card.sender}: ${card.subject}`}
@@ -289,38 +295,35 @@ export default function NotificationWindow() {
             onMouseEnter={() => setPaused(true)}
             onMouseLeave={() => setPaused(false)}
           >
-            <div
-              className="pebble-notify-avatar"
-              style={{ background: avatarColor(card.account_id) }}
-              aria-hidden="true"
-            >
-              {initials(card)}
-            </div>
-            <div className="pebble-notify-body">
+            <div className="pebble-notify-content">
               <div className="pebble-notify-head">
+                <span
+                  className="pebble-notify-dot"
+                  style={{ background: deriveAccountColor(card.account_id) }}
+                  aria-hidden="true"
+                />
                 <span className="pebble-notify-sender">{card.sender || t("notification.unknownSender")}</span>
-                <span className="pebble-notify-time">{time}</span>
                 {card.count > 1 && (
                   <span className="pebble-notify-count" aria-label={t("notification.threadCount", { count: card.count })}>
                     +{card.count - 1}
                   </span>
                 )}
+                <span className="pebble-notify-time">{time}</span>
+                <button
+                  type="button"
+                  className="pebble-notify-close"
+                  aria-label={t("notification.dismiss")}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    dismiss(card.id);
+                  }}
+                >
+                  ×
+                </button>
               </div>
               <div className="pebble-notify-subject">{card.subject || t("notification.noSubject")}</div>
               {card.snippet && <div className="pebble-notify-snippet">{card.snippet}</div>}
             </div>
-            <button
-              type="button"
-              className="pebble-notify-close"
-              aria-label={t("notification.dismiss")}
-              onClick={(event) => {
-                event.stopPropagation();
-                dismiss(card.id);
-              }}
-            >
-              ×
-            </button>
-            <span className="pebble-notify-progress" aria-hidden="true" />
           </div>
         );
       }),
@@ -331,11 +334,13 @@ export default function NotificationWindow() {
     <>
       <style>{STYLES}</style>
       <div
-        ref={rootRef}
         className={`pebble-notify-root${paused ? " pebble-notify-paused" : ""}`}
         style={{ "--pebble-dismiss": `${AUTO_DISMISS_MS}ms` } as React.CSSProperties}
       >
-        {rendered}
+        <div className="pebble-notify-panel" ref={panelRef}>
+          {rendered}
+          <span className="pebble-notify-progress" aria-hidden="true" />
+        </div>
       </div>
     </>
   );

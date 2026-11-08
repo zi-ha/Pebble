@@ -36,6 +36,11 @@
         overflow: hidden;
         transition: opacity .5s ease-out;
       }
+      /* The new-mail popup is a frameless card window: a splash there would
+         just be a fake "loading" card, and it is not the app starting up. */
+      html[data-window="notification-popup"] #splash {
+        display: none !important;
+      }
       @media (prefers-color-scheme: light) {
         #splash {
           background: #f5f5f5;
@@ -106,6 +111,10 @@
     </style>
     <script>
       window.__splashStart=Date.now();
+      // The new-mail popup is a second window that loads this same document. It
+      // must never paint the splash: a transparent corner card showing "Pebble
+      // is loading" looks like a hung app, and the markup alone cannot know it.
+      try{if(location.hash==='#notification'){document.documentElement.setAttribute('data-window','notification-popup')}}catch(e){}
       // Apply saved theme immediately to avoid flash of wrong theme
       try{var t=localStorage.getItem('pebble-theme')||'light';var d=t==='system'?matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light':t;document.documentElement.setAttribute('data-theme',d)}catch(e){}
     </script>

@@ -10,11 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - New-mail notifications are coalesced instead of one per message: arrivals are held for 700 ms, merged per conversation and capped at three cards, each showing how many messages sit behind it. A 50-message sync now produces a handful of cards rather than 50 toasts.
 - Windows now draws its own notification popup instead of a system toast: a frameless, always-on-top card in the bottom-right corner with the sender, subject, a preview line, the unread count and a close button; clicking it opens the message. `Settings → Send test notification` previews it. macOS and Linux keep the system notification centre, and Windows falls back to it if the popup cannot be created.
+- The popup is a single flat panel docked flush against the bottom-right corner of the work area (no margin, so it clears a bottom taskbar), with only its top-left corner rounded. Rows are separated by a hairline, share the app palette instead of a hardcoded white/blue one, and follow the light or dark theme.
 
 ### Changed
 
 - Rules run before a notification is queued, so a rule that archives, moves or marks a message read keeps it quiet.
 - Notifications are suppressed while the main window is focused and dropped when it regains focus, instead of popping up on top of the mail the user is already reading.
+- Cards no longer lift or grow on hover; the only motion left is a background tint and the auto-dismiss progress line.
+- The popup window no longer paints the app splash while its bundle boots: `index.html` hides the splash for that window in markup, and the bundle removes it before awaiting anything (it also skips the profile-storage round-trip), so a slow or failed load can no longer leave a "Pebble is loading" card in the corner.
 - Flattened the Rust workspace back into a single `pebble` crate: the nine `crates/pebble-*` libraries now live under `src-tauri/src/{core,store,mail,search,rules,privacy,crypto,oauth,translate}`. `Cargo.toml` has one workspace member, the `rusqlite` feature toggle is gone, and per-crate commands become module filters (`cargo test -p pebble mail::`).
 - `package.json` is the single source of truth for the pnpm version; the release workflow no longer pins `9.12.3` next to `packageManager`, which made `pnpm/action-setup` fail with "Multiple versions of pnpm specified".
 

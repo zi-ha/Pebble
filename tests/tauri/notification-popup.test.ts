@@ -9,6 +9,7 @@ function read(...parts: string[]) {
 const notificationSource = read("src-tauri", "src", "commands", "notification_center.rs");
 const indexingSource = read("src-tauri", "src", "commands", "indexing.rs");
 const mainSource = read("src", "main.tsx");
+const popupSource = read("src", "notification", "NotificationWindow.tsx");
 
 describe("new mail popup", () => {
   it("draws its own window on Windows instead of the system toast", () => {
@@ -35,6 +36,49 @@ describe("new mail popup", () => {
     expect(notificationSource).toContain("fn main_window_is_active(");
     expect(notificationSource).toContain("if main_window_is_active(app) {");
     expect(notificationSource).toContain("dismiss_all");
+  });
+
+  it("docks the window flush against the bottom-right corner of the work area", () => {
+    // The work area (not the raw monitor) is what keeps the panel above a
+    // bottom taskbar; without it "the corner" is off-screen.
+    expect(notificationSource).toContain("monitor.work_area()");
+    expect(notificationSource).toContain("corner_x - POPUP_WIDTH");
+    expect(notificationSource).toContain("corner_y - height");
+    // A margin would float the panel away from the corner again.
+    expect(notificationSource).not.toMatch(/POPUP_MARGIN_(RIGHT|BOTTOM)\s*:/);
+  });
+
+  it("keeps the cards still instead of lifting them on hover", () => {
+    expect(popupSource).not.toContain("translateY");
+    expect(popupSource).not.toMatch(/pebble-notify-item:hover\s*\{[^}]*transform/);
+  });
+
+  it("takes its colours from the app palette so dark theme carries over", () => {
+    expect(popupSource).toContain("applyStoredTheme");
+    expect(popupSource).toContain('endsWith(":pebble-theme")');
+    expect(popupSource).toContain("var(--color-main-bg)");
+    expect(popupSource).not.toMatch(/background:\s*#(fff|ffffff)\b/i);
+  });
+
+  it("never paints the app splash inside the popup window", () => {
+    const html = read("index.html");
+
+    // The static markup is enough to show a spinner, so it has to be switched
+    // off from `index.html` itself rather than by the bundle that may not boot.
+    expect(html).toContain("location.hash==='#notification'");
+    expect(html).toContain("notification-popup");
+    expect(html).toContain('html[data-window="notification-popup"] #splash');
+
+    // And the bundle removes the node before awaiting anything.
+    const popupBranchAt = mainSource.indexOf("function renderNotificationPopup()");
+    expect(popupBranchAt).toBeGreaterThan(-1);
+    const removeAt = mainSource.indexOf('document.getElementById("splash")?.remove()', popupBranchAt);
+    const awaitAt = mainSource.indexOf("await import(", popupBranchAt);
+    expect(removeAt).toBeGreaterThan(popupBranchAt);
+    expect(removeAt).toBeLessThan(awaitAt);
+    // No IPC round-trip stands between the popup window opening and its cards.
+    const popupBody = mainSource.slice(popupBranchAt, mainSource.indexOf("async function bootstrap()"));
+    expect(popupBody).not.toContain("initializeProfileStorageNamespace()");
   });
 
   it("queues notifications only after the rules had their say", () => {
